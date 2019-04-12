@@ -5,7 +5,6 @@ class Script:
     """
     def __init__(self):
         self.subscripts = []
-        
     
     def render(self, draft=False, framerate=20, keepframes=False):
         pass
@@ -43,6 +42,8 @@ class Subscript:
     def add_action(self, description):
         if 'and' not in description:
             self.actions.append(Action(description))
+        else:
+            self.actions.append(SimultaneousAction(description.split(' and ')))
 
     def show_script(self):
         for action in self.actions:
@@ -50,13 +51,37 @@ class Subscript:
         
         
 class Action:
+    """
+    Intended to represent a single action in
+    a movie, e.g. a rotation, change of material
+    or zoom-in
+    """
     def __init__(self, description):
         self.description = description
-        self.frames = []
+        self.action_type = None
+        self.nframes = 50
+        self.modificators = None
+        self.frames = []  # should (?) contain a list of frames in the overall movie's numbering
     
     def __repr__(self):
         return self.description
+    
+    def tcl(self):
+        """
+        Should produce the TCL code that will
+        produce the action in question
+        :return: str, TCL code
+        """
+        pass
+    
+    def parser(self, command):
+        pass
         
         
-class SimultaneousAction(Action):
-    pass
+class SimultaneousAction:
+    """
+    Intended to represent a number of actions
+    that take place simultaneously
+    """
+    def __init__(self, descriptions):
+        self.actions = [Action(description) for description in descriptions]

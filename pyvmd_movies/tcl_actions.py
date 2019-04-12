@@ -1,20 +1,6 @@
 from math import exp
 import numpy as np
 
-
-class ActionPrimitive:
-    def __init__(self, nframes):
-        self.nframes = nframes
-    
-    def __str__(self):
-        tcl_loop(self)
-
-class Rotate(ActionPrimitive):
-    def __init__(selfaxis, angle, nframes, sigmoid=True):
-        super().__init__(nframes)
-        pass
-
-
 def sigmoid_increments(sum, n_points, abruptness=1):
     """
     Returns stepwise increments that result in logistic
@@ -38,6 +24,3 @@ def logistic_deriv(x, k):
     l = logistic(x, k)
     return l*(1-l)
 
-
-def tcl_loop(action):
-    pass
