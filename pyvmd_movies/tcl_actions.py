@@ -1,6 +1,7 @@
 from math import exp
 import numpy as np
 
+
 def sigmoid_increments(sum, n_points, abruptness=1):
     """
     Returns stepwise increments that result in logistic
