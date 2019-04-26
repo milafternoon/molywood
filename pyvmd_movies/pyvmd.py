@@ -7,7 +7,8 @@ class Script:
     def __init__(self):
         self.subscripts = []
         self.directives = {}
-    
+        self.fps = 20
+        
     def render(self, draft=False, framerate=20, keepframes=False):
         """
         The final fn that renders the movie (runs
@@ -27,7 +28,7 @@ class Script:
         :return: None
         """
         for subscript in self.subscripts:
-            print('Subscript {}: \n\n'.format(subscript.name))
+            print('\n\n\tScene {}: \n\n'.format(subscript.name))
             subscript.show_script()
 
     def from_file(self, filename):
@@ -73,33 +74,40 @@ class Script:
     
     def parse_subscripts(self, subscripts):
         objects = []
-        struct, traj = None, None
+        struct, traj, tcl = None, None, None
         for sub in subscripts.keys():
-            if sub in self.directives.keys():
-                try:
-                    struct = self.directives[sub]['structure']
-                except KeyError:
-                    pass
-                try:
-                    traj = self.directives[sub]['trajectory']
-                except KeyError:
-                    pass
-            objects.append(Subscript(sub, struct, traj))
-            for action in subscripts[sub]:
-                objects[-1].add_action(action)
+            if subscripts[sub]:
+                if sub in self.directives.keys():
+                    try:
+                        struct = self.directives[sub]['structure']
+                    except KeyError:
+                        pass
+                    try:
+                        traj = self.directives[sub]['trajectory']
+                    except KeyError:
+                        pass
+                    try:
+                        tcl = self.directives[sub]['visualization']
+                    except KeyError:
+                        pass
+                objects.append(Scene(self, sub, struct, traj, tcl))
+                for action in subscripts[sub]:
+                    objects[-1].add_action(action)
         return objects
         
 
-class Subscript:
+class Scene:
     """
-    A Subscript instance is restricted to a single
+    A Scene instance is restricted to a single
     molecular system, and hence has to be initialized
     with a valid input file
     """
-    def __init__(self, name, molecule_file=None, traj=None):
+    def __init__(self, script, name, molecule_file=None, traj=None, tcl=None, fps=20):
+        self.script = script
         self.name = name
         self.system = molecule_file
         self.traj = traj
+        self.visualization = tcl
         self.actions = []
     
     def add_traj(self, traj):
@@ -118,9 +126,9 @@ class Subscript:
         :return: None
         """
         if not description.startswith('{'):
-            self.actions.append(Action(description))
+            self.actions.append(Action(self, description))
         else:
-            self.actions.append(SimultaneousAction(description))
+            self.actions.append(SimultaneousAction(self, description))
 
     def show_script(self):
         """
@@ -130,6 +138,23 @@ class Subscript:
         """
         for action in self.actions:
             print(action)
+            
+    def tcl(self):
+        if self.system:
+            filetype = self.system.split('.')[-1]
+            code = 'mol new {} type {} first 0 last -1 step 1 ' \
+                          'filebonds 1 autobonds 1 waitfor all'.format(self.system, filetype)
+            if self.traj:
+                trajtype = self.traj.split('.')[-1]
+                code = code + 'mol addfile {} type {} first 0 last -1 step 1 ' \
+                              'filebonds 1 autobonds 1 waitfor all'.format(self.traj, trajtype)
+        elif self.visualization:
+            code = open(self.visualization, 'r').readlines()
+        else:
+            raise ValueError('Either "structure" or "visualization" has to be specified for {}'.format(self.name))
+        for action in self.actions:
+            code = code + action.tcl()
+        return code
         
         
 class Action:
@@ -138,12 +163,12 @@ class Action:
     a movie, e.g. a rotation, change of material
     or zoom-in
     """
-    def __init__(self, description):
+    def __init__(self, scene, description):
+        self.scene = scene
         self.description = description
         self.action_type = None
-        self.nframes = 50
-        self.modificators = None
-        self.initframe = []  # should contain an initial frame number in the overall movie's numbering
+        self.parameters = None  # will be a dict of action parameters
+        self.initframe = None  # should contain an initial frame number in the overall movie's numbering
     
     def __repr__(self):
         return self.description
@@ -154,7 +179,7 @@ class Action:
         produce the action in question
         :return: str, TCL code
         """
-        pass
+        code = "set fr {}".format(self.initframe)
     
     def parser(self, command):
         """
@@ -172,5 +197,6 @@ class SimultaneousAction:
     that take place simultaneously (e.g. zoom
     and rotation)
     """
-    def __init__(self, description):
+    def __init__(self, scene, description):
+        self.scene = scene
         self.description = description
