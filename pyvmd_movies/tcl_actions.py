@@ -47,11 +47,13 @@ def logistic_deriv(x, k):
 def gen_loop(action):
     iterators = gen_iterators(action)
     command = gen_command(action)
+    rendermethod = 'Snapshot' if action.scene.script.draft else 'TachyonInternal'
+    extension = 'png' if action.scene.script.draft else 'tga'
+    resolution = '-res {} {}'.format(*action.scene.resolution) if not action.scene.script.draft else ''
     # TODO separate into lists of increments and have a single list of iterators that refers to individual lists
     code = 'foreach t [list {}] \{ {}  \nputs "rendering frame: ' \
-           '$fr\n"render RENDERMETHOD {}-$fr.RENDER_EXTENSION RENDER_MODIFIERS\nincr fr\}'.format(iterators,
-                                                                                                  command,
-                                                                                                  action.scene.name)
+           '$fr\n"render {} {}-$fr.{} {}\nincr fr\}'.format(iterators, command, rendermethod, action.scene.name,
+                                                            extension, resolution)
 
 
 def gen_iterators(action):

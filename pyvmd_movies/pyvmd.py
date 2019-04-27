@@ -1,3 +1,7 @@
+from .tcl_actions import *
+import sys, subprocess
+
+
 class Script:
     """
     Main class that will combine all information
@@ -5,21 +9,40 @@ class Script:
     panels, overlays etc.)
     """
     def __init__(self):
-        self.subscripts = []
+        self.scenes = []
         self.directives = {}
         self.fps = 20
-        
-    def render(self, draft=False, framerate=20, keepframes=False):
+        self.draft = False
+        self.keepframes = True
+
+    def render(self):
         """
         The final fn that renders the movie (runs
         the TCL script, then uses combine and/or
         ffmpeg to assemble the movie frame by frame)
-        :param draft: bool, use screenshots to get a quick-and-dirty version
-        :param framerate: int, will use the desired framerate
-        :param keepframes: bool, whether to keep frames after compiling the movie
         :return: None
         """
-        pass
+        try:
+            self.fps = self.directives['global']['fps']
+        except KeyError:
+            pass
+        try:
+            self.draft = True if self.directives['global']['draft'].lower() in ['y', 't', 'yes', 'true'] else False
+        except KeyError:
+            pass
+        try:
+            self.keepframes = True if self.directives['global']['keepframes'].lower() in ['y', 't', 'yes', 'true'] else False
+        except KeyError:
+            pass
+        for scene in self.scenes:
+            tcl_script = scene.tcl()
+            with open('script_{}.tcl'.format(scene.name), 'w') as out:
+                out.write(tcl_script)
+            subprocess.run('vmd -e script_{}.tcl'.format(scene.name))
+        # render then should:
+        # (a) run imagemagick to do post-processing
+        # (b) run ffmpeg to combine frames from (a)
+        # (c) remove individual frames if keepframes=False
     
     def show_script(self):
         """
@@ -27,7 +50,7 @@ class Script:
         buffered in the object for rendering
         :return: None
         """
-        for subscript in self.subscripts:
+        for subscript in self.scenes:
             print('\n\n\tScene {}: \n\n'.format(subscript.name))
             subscript.show_script()
 
@@ -59,7 +82,7 @@ class Script:
                 else:
                     subscripts[current_sub].append(line)
         self.directives = self.parse_directives(master_setup)
-        self.subscripts = self.parse_subscripts(subscripts)
+        self.scenes = self.parse_subscripts(subscripts)
         
     @staticmethod
     def parse_directives(directives):
@@ -102,13 +125,14 @@ class Scene:
     molecular system, and hence has to be initialized
     with a valid input file
     """
-    def __init__(self, script, name, molecule_file=None, traj=None, tcl=None, fps=20):
+    def __init__(self, script, name, molecule_file=None, traj=None, tcl=None, resolution=(1000,1000)):
         self.script = script
         self.name = name
         self.system = molecule_file
         self.traj = traj
         self.visualization = tcl
         self.actions = []
+        self.resolution = resolution
     
     def add_traj(self, traj):
         """
@@ -179,24 +203,33 @@ class Action:
         produce the action in question
         :return: str, TCL code
         """
-        code = "set fr {}".format(self.initframe)
+        return "\n\nset fr {}\n".format(self.initframe) + gen_loop(self)
     
-    def parser(self, command):
+    def parse(self, command):
         """
         Parses a single command from the text input
         and converts into action parameters
         :param command: str, description of the action
         :return: None
         """
-        pass
+        spl = command.split()
+        self.action_type = spl[0]
+        self.parameters = {prm.split('=')[0]:prm.split('=')[1] for prm in spl[1:]}
         
         
-class SimultaneousAction:
+class SimultaneousAction(Action):
     """
     Intended to represent a number of actions
     that take place simultaneously (e.g. zoom
     and rotation)
     """
     def __init__(self, scene, description):
-        self.scene = scene
-        self.description = description
+        super().__init__(scene, description)
+        
+    #TODO think hard
+
+
+if __name__ == "__main__":
+    scr = Script()
+    scr.from_file(sys.argv[1])
+    scr.render(scr.global_directives)
