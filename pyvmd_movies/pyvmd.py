@@ -3,6 +3,8 @@ import subprocess
 
 if __name__ == "__main__":
     import tcl_actions
+else:
+    import pyvmd_movies.tcl_actions as tcl_actions
 
 
 class Script:
@@ -135,7 +137,7 @@ class Script:
         :return: None
         """
         try:
-            self.fps = self.directives['global']['fps']
+            self.fps = float(self.directives['global']['fps'])
         except KeyError:
             pass
         try:
@@ -184,7 +186,7 @@ class Scene:
         if not description.startswith('{'):
             self.actions.append(Action(self, description))
         else:
-            self.actions.append(SimultaneousAction(self, description))
+            self.actions.append(SimultaneousAction(self, description.strip('{}')))
 
     def show_script(self):
         """
@@ -217,11 +219,11 @@ class Scene:
         if self.system:
             filetype = self.system.split('.')[-1]
             code = 'mol new {} type {} first 0 last -1 step 1 ' \
-                   'filebonds 1 autobonds 1 waitfor all'.format(self.system, filetype)
+                   'filebonds 1 autobonds 1 waitfor all\n'.format(self.system, filetype)
             if self.traj:
                 trajtype = self.traj.split('.')[-1]
                 code = code + 'mol addfile {} type {} first 0 last -1 step 1 ' \
-                              'filebonds 1 autobonds 1 waitfor all'.format(self.traj, trajtype)
+                              'filebonds 1 autobonds 1 waitfor all\n'.format(self.traj, trajtype)
         elif self.visualization:
             code = open(self.visualization, 'r').readlines()
         else:
@@ -241,7 +243,7 @@ class Action:
         self.scene = scene
         self.description = description
         self.action_type = None
-        self.parameters = None  # will be a dict of action parameters
+        self.parameters = {}  # will be a dict of action parameters
         self.initframe = None  # should contain an initial frame number in the overall movie's numbering
         self.framenum = None
         self.parse(description)
@@ -266,7 +268,7 @@ class Action:
         """
         spl = command.split()
         self.action_type = spl[0]
-        self.parameters = {prm.split('=')[0]: prm.split('=')[1] for prm in spl[1:]}
+        self.parameters.update({prm.split('=')[0]: prm.split('=')[1] for prm in spl[1:]})
         if 't' in self.parameters.keys():
             self.parameters['t'] = self.parameters['t'].rstrip('s')
         
@@ -280,7 +282,22 @@ class SimultaneousAction(Action):
     def __init__(self, scene, description):
         super().__init__(scene, description)
         
-    #  TODO think hard
+    def parse(self, command):
+        """
+        We simply add action parameters to the
+        params dict, assuming there will be no
+        conflict of names (need to ensure this
+        when setting action syntax); this *is*
+        a workaround, but should work fine for
+        now - might write a preprocessor later
+        to pick up and fix any possible issues
+        :param command: str, description of the actions
+        :return: None
+        """
+        actions = [comm.strip() for comm in command.split(';')]
+        for action in actions:
+            super().parse(action)
+        self.action_type = [action.split()[0] for action in actions]
 
 
 if __name__ == "__main__":
