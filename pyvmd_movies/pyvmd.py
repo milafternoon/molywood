@@ -31,10 +31,12 @@ class Script:
         except KeyError:
             pass
         try:
-            self.keepframes = True if self.directives['global']['keepframes'].lower() in ['y', 't', 'yes', 'true'] else False
+            self.keepframes = True if self.directives['global']['keepframes'].lower() in ['y', 't', 'yes', 'true'] \
+                else False
         except KeyError:
             pass
         for scene in self.scenes:
+            scene.calc_framenum()
             tcl_script = scene.tcl()
             with open('script_{}.tcl'.format(scene.name), 'w') as out:
                 out.write(tcl_script)
@@ -125,7 +127,7 @@ class Scene:
     molecular system, and hence has to be initialized
     with a valid input file
     """
-    def __init__(self, script, name, molecule_file=None, traj=None, tcl=None, resolution=(1000,1000)):
+    def __init__(self, script, name, molecule_file=None, traj=None, tcl=None, resolution=(1000, 1000)):
         self.script = script
         self.name = name
         self.system = molecule_file
@@ -162,12 +164,30 @@ class Scene:
         """
         for action in self.actions:
             print(action)
+    
+    def calc_framenum(self):
+        """
+        Once the fps rate is known, we can go through all actions
+        and set integer frame counts as needed. Note: some actions
+        can be instantaneous (e.g. recenter camera), so that
+        not all will have a non-zero framenum
+        :return: None
+        """
+        fps = self.script.fps
+        cumsum = 0
+        for action in self.actions:
+            action.initframe = cumsum
+            try:
+                action.framenum = int(float(action.parameters['t'])*fps)
+            except KeyError:
+                action.framenum = 0
+            cumsum += action.framenum
             
     def tcl(self):
         if self.system:
             filetype = self.system.split('.')[-1]
             code = 'mol new {} type {} first 0 last -1 step 1 ' \
-                          'filebonds 1 autobonds 1 waitfor all'.format(self.system, filetype)
+                   'filebonds 1 autobonds 1 waitfor all'.format(self.system, filetype)
             if self.traj:
                 trajtype = self.traj.split('.')[-1]
                 code = code + 'mol addfile {} type {} first 0 last -1 step 1 ' \
@@ -193,6 +213,7 @@ class Action:
         self.action_type = None
         self.parameters = None  # will be a dict of action parameters
         self.initframe = None  # should contain an initial frame number in the overall movie's numbering
+        self.framenum = None
     
     def __repr__(self):
         return self.description
@@ -203,7 +224,7 @@ class Action:
         produce the action in question
         :return: str, TCL code
         """
-        return "\n\nset fr {}\n".format(self.initframe) + gen_loop(self)
+        return gen_loop(self)
     
     def parse(self, command):
         """
@@ -214,7 +235,7 @@ class Action:
         """
         spl = command.split()
         self.action_type = spl[0]
-        self.parameters = {prm.split('=')[0]:prm.split('=')[1] for prm in spl[1:]}
+        self.parameters = {prm.split('=')[0]: prm.split('=')[1] for prm in spl[1:]}
         
         
 class SimultaneousAction(Action):
@@ -226,10 +247,10 @@ class SimultaneousAction(Action):
     def __init__(self, scene, description):
         super().__init__(scene, description)
         
-    #TODO think hard
+    #  TODO think hard
 
 
 if __name__ == "__main__":
     scr = Script()
     scr.from_file(sys.argv[1])
-    scr.render(scr.global_directives)
+    scr.render()

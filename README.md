@@ -2,7 +2,6 @@
 
 + animate (initframe, nframes, stride, smoothing)
 + rotate (axis, nframes, sigmoid)
-+ zoom (scale, nframes, sigmoid)
++ zoom_in/zoom_out (scale, nframes, sigmoid)
 + make_transparent (initial_opacity, final_opacity, nframes, sigmoid)
 + change_active (selection)
-+ compose (mpl function, size, position)
