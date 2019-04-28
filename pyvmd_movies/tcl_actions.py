@@ -11,7 +11,7 @@ def sigmoid_increments(n_points, abruptness):
     """
     scale_range = (-5, 5)
     points = np.linspace(*scale_range, n_points)
-    increments = np.array([logistic_deriv(x, abruptness) for x in points])
+    increments = logistic_deriv(points, abruptness)
     return increments
     
 
@@ -21,6 +21,7 @@ def sigmoid_norm_sum(cumsum, n_points, abruptness=1):
     :param cumsum: float, cumulative sum of the increments
     :param n_points: int, number of increments
     :param abruptness: float, how fast the transition is
+    :return: np.array, array of increments
     """
     increments = sigmoid_increments(n_points, abruptness)
     return cumsum*increments/np.sum(increments)
@@ -32,6 +33,7 @@ def sigmoid_norm_prod(cumprod, n_points, abruptness=1):
     :param cumprod: float, cumulative sum of the increments
     :param n_points: int, number of increments
     :param abruptness: float, how fast the transition is
+    :return: np.array, array of increments
     """
     increments = 1 + sigmoid_increments(n_points, abruptness)
     prod = np.prod(increments)
@@ -39,11 +41,49 @@ def sigmoid_norm_prod(cumprod, n_points, abruptness=1):
     return increments**exponent
 
 
+def sigmoid_norm_sum_linear_mid(cumsum, n_points, abruptness=1, fraction_linear=0.8):
+    """
+    Yields n_points increments that sum to cumsum
+    by first starting with smooth sigmoid increments,
+    then incrementing linearly, and then stopping
+    smoothly again with sigmoid increments
+    (e.g. we want to rotate more or less continuously
+    by 720deg about an axis, but start and finish smoothly)
+    :param cumsum: float, cumulative sum of the increments
+    :param n_points: int, number of increments
+    :param abruptness: float, how fast the transition is
+    :param fraction_linear: float, fraction of the action spent in the linear regime
+    :return: np.array, array of increments
+    """
+    n_points_sigm = int(n_points * (1-fraction_linear))
+    n_points_linear = n_points - n_points_sigm
+    increments = sigmoid_increments(n_points_sigm, abruptness)
+    midpoint = len(increments)//2
+    midpoint_increment = increments[midpoint]
+    increments = np.concatenate((increments[:midpoint],
+                                 np.ones(n_points_linear)*midpoint_increment,
+                                 increments[midpoint:]))
+    return cumsum * increments / np.sum(increments)
+
+
 def logistic(x, k):
+    """
+    The logistic fn used to smoothen transitions
+    :param x: abscissa
+    :param k: transition abruptness
+    :return: float or array, value of the logistic fn
+    """
     return 1/(1+np.exp(-k*x))
 
 
 def logistic_deriv(x, k):
+    """
+    Derivative of the logistic fn used to smoothen transitions
+    (in a discretized version yields single-step increments)
+    :param x: abscissa
+    :param k: transition abruptness
+    :return: float or array, value of the logistic fn derivative
+    """
     logi = logistic(x, k)
     return logi*(1-logi)
 
@@ -118,7 +158,8 @@ def gen_command(action):
         axis = action.parameters['axis']
         commands['rot'] = "set t [lindex $rot $i]\nrotate {} by $t\n".format(axis)
     if 'make_transparent' in action.action_type:
-        # TODO first duplicate material and set opacity?
+        # TODO let the user either specify selection number (then duplicate and set material) or material name
+        # TODO but this should be done in gen_iterators to preserve execution order?
         pass
     if 'zoom_in' in action.action_type:
         commands['zin'] = "set t [lindex $zin $i]\nscale by $t\n"
