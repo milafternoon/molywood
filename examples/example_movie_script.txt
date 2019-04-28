@@ -1,0 +1,33 @@
+$ global          fps=20  draft=false  keepframes=true
+$ layout          rows=2  cols=1
+$ scene_1         structure=protein.pdb    trajectory=dyn.xtc  pos=1,1
+$ scene_2         pos=2,1
+
+
+# scene_1
+
+do_nothing        t=2s
+zoom_in           t=2s scale=2
+make_transparent  t=2s sel=0
+rotate            t=4s angle=360 axis=z
+change_pivot      sel=2
+{
+ zoom_in          scale=2;
+ rotate           angle=90 axis=y;
+ t=2s
+}
+{
+ zoom_out         scale=2;
+ rotate           angle=-90 axis=y;
+ t=2s
+}
+run_trajectory    t=5s frames=0:80:2 smooth=4
+
+
+# scene_2
+
+empty_plot        t=14s
+plot_data         t=2s  mpl=plot.py  data=data
+
+
+

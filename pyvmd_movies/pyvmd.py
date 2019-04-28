@@ -1,6 +1,8 @@
-from tcl_actions import *
 import sys
 import subprocess
+
+if __name__ == "__main__":
+    import tcl_actions
 
 
 class Script:
@@ -9,29 +11,14 @@ class Script:
     and render the movie (possibly with multiple
     panels, overlays etc.)
     """
-    def __init__(self):
+    def __init__(self, scriptfile=None):
         self.scenes = []
         self.directives = {}
         self.fps = 20
         self.draft = False
         self.keepframes = True
-    
-    def prepare(self):
-        try:
-            self.fps = self.directives['global']['fps']
-        except KeyError:
-            pass
-        try:
-            self.draft = True if self.directives['global']['draft'].lower() in ['y', 't', 'yes', 'true'] else False
-        except KeyError:
-            pass
-        try:
-            self.keepframes = True if self.directives['global']['keepframes'].lower() in ['y', 't', 'yes', 'true'] \
-                else False
-        except KeyError:
-            pass
-        for scene in self.scenes:
-            scene.calc_framenum()
+        if scriptfile:
+            self.from_file(scriptfile)
 
     def render(self):
         """
@@ -63,6 +50,7 @@ class Script:
     def from_file(self, filename):
         """
         Reads the full movie script from an input file
+        and runs parser/setter functions
         :param filename: str, name of the file
         :return: None
         """
@@ -88,11 +76,18 @@ class Script:
                 else:
                     subscripts[current_sub].append(line)
         self.directives = self.parse_directives(master_setup)
-        self.scenes = self.parse_subscripts(subscripts)
+        self.scenes = self.parse_scenes(subscripts)
         self.prepare()
         
     @staticmethod
     def parse_directives(directives):
+        """
+        Reads global directives that affect
+        the main object (layout, fps, draftmode
+        etc.) based on $-prefixed entries
+        :param directives:
+        :return:
+        """
         dirs = {}
         for directive in directives:
             entries = directive.split()
@@ -102,11 +97,18 @@ class Script:
                 dirs[entries[0]][key] = value
         return dirs
     
-    def parse_subscripts(self, subscripts):
+    def parse_scenes(self, scenes):
+        """
+        Reads info on individual scenes and initializes
+        Scene objects, appending them to the main
+        object's scene list
+        :param scenes: dict, contains scene_name: description bindings
+        :return: list of Scene objects
+        """
         objects = []
         struct, traj, tcl = None, None, None
-        for sub in subscripts.keys():
-            if subscripts[sub]:
+        for sub in scenes.keys():
+            if scenes[sub]:
                 if sub in self.directives.keys():
                     try:
                         struct = self.directives[sub]['structure']
@@ -121,9 +123,32 @@ class Script:
                     except KeyError:
                         pass
                 objects.append(Scene(self, sub, struct, traj, tcl))
-                for action in subscripts[sub]:
+                for action in scenes[sub]:
                     objects[-1].add_action(action)
         return objects
+
+    def prepare(self):
+        """
+        Once text input is parsed, this fn sets
+        global parameters such as fps, draft mode
+        or whether to keep frames
+        :return: None
+        """
+        try:
+            self.fps = self.directives['global']['fps']
+        except KeyError:
+            pass
+        try:
+            self.draft = True if self.directives['global']['draft'].lower() in ['y', 't', 'yes', 'true'] else False
+        except KeyError:
+            pass
+        try:
+            self.keepframes = True if self.directives['global']['keepframes'].lower() in ['y', 't', 'yes', 'true'] \
+                else False
+        except KeyError:
+            pass
+        for scene in self.scenes:
+            scene.calc_framenum()
         
 
 class Scene:
@@ -230,7 +255,7 @@ class Action:
         produce the action in question
         :return: str, TCL code
         """
-        return gen_loop(self)
+        return tcl_actions.gen_loop(self)
     
     def parse(self, command):
         """
@@ -259,6 +284,10 @@ class SimultaneousAction(Action):
 
 
 if __name__ == "__main__":
+    # this is only a test case for now
     scr = Script()
     scr.from_file(sys.argv[1])
-    scr.render()
+    sc = scr.scenes[0]
+    zin = sc.actions[1]
+    print(zin.tcl())
+    # scr.render()
