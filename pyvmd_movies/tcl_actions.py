@@ -61,7 +61,7 @@ def gen_loop(action):
     code = code + 'puts "rendering frame: $fr\n'
     for act in command.keys():
         code = code + command[act]
-    code = code + 'render {} {}-$fr.{} {}\nincr fr\n\}'.format(rendermethod, action.scene.name, extension, resolution)
+    code = code + 'render {} {}-$fr.{} {}\nincr fr\n}}'.format(rendermethod, action.scene.name, extension, resolution)
     return code
 
 
@@ -76,16 +76,31 @@ def gen_iterators(action):
     iterators = {}
     try:
         sigmoid = action.parameters['sigmoid']
-        sigmoid = True if sigmoid.lower() in ['true', 't', 'y', 'yes'] else False
+        sigmoid = False if sigmoid.lower() in ['false', 'f', 'n', 'no'] else False
     except KeyError:
-        sigmoid = False
+        sigmoid = True
     try:
         abruptness = float(action.parameters['abruptness'])
     except KeyError:
         abruptness = 1
     if 'rotate' in action.action_type:
-        arr = sigmoid_norm_sum(action.parameters['angle'], action.framenum, abruptness)
-        iterators['rot'] = ' '.join(list(arr))
+        if sigmoid:
+            arr = sigmoid_norm_sum(float(action.parameters['angle']), action.framenum, abruptness)
+        else:
+            arr = np.ones(action.framenum) * float(action.parameters['angle'])/action.framenum
+        iterators['rot'] = ' '.join([str(el) for el in arr])
+    if 'zoom_in' in action.action_type:
+        if sigmoid:
+            arr = sigmoid_norm_prod(float(action.parameters['scale']), action.framenum, abruptness)
+        else:
+            arr = np.ones(action.framenum) * float(action.parameters['scale'])**(1/action.framenum)
+        iterators['zin'] = ' '.join([str(el) for el in arr])
+    if 'zoom_out' in action.action_type:
+        if sigmoid:
+            arr = sigmoid_norm_prod(1/float(action.parameters['scale']), action.framenum, abruptness)
+        else:
+            arr = np.ones(action.framenum) * 1/(float(action.parameters['scale'])**(1/action.framenum))
+        iterators['zou'] = ' '.join([str(el) for el in arr])
     return iterators
     
 

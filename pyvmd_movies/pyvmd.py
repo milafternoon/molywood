@@ -1,5 +1,6 @@
-from .tcl_actions import *
-import sys, subprocess
+from tcl_actions import *
+import sys
+import subprocess
 
 
 class Script:
@@ -14,14 +15,8 @@ class Script:
         self.fps = 20
         self.draft = False
         self.keepframes = True
-
-    def render(self):
-        """
-        The final fn that renders the movie (runs
-        the TCL script, then uses combine and/or
-        ffmpeg to assemble the movie frame by frame)
-        :return: None
-        """
+    
+    def prepare(self):
         try:
             self.fps = self.directives['global']['fps']
         except KeyError:
@@ -37,6 +32,15 @@ class Script:
             pass
         for scene in self.scenes:
             scene.calc_framenum()
+
+    def render(self):
+        """
+        The final fn that renders the movie (runs
+        the TCL script, then uses combine and/or
+        ffmpeg to assemble the movie frame by frame)
+        :return: None
+        """
+        for scene in self.scenes:
             tcl_script = scene.tcl()
             with open('script_{}.tcl'.format(scene.name), 'w') as out:
                 out.write(tcl_script)
@@ -85,6 +89,7 @@ class Script:
                     subscripts[current_sub].append(line)
         self.directives = self.parse_directives(master_setup)
         self.scenes = self.parse_subscripts(subscripts)
+        self.prepare()
         
     @staticmethod
     def parse_directives(directives):
@@ -214,9 +219,10 @@ class Action:
         self.parameters = None  # will be a dict of action parameters
         self.initframe = None  # should contain an initial frame number in the overall movie's numbering
         self.framenum = None
+        self.parse(description)
     
     def __repr__(self):
-        return self.description
+        return self.description.split()[0]
     
     def tcl(self):
         """
@@ -236,6 +242,8 @@ class Action:
         spl = command.split()
         self.action_type = spl[0]
         self.parameters = {prm.split('=')[0]: prm.split('=')[1] for prm in spl[1:]}
+        if 't' in self.parameters.keys():
+            self.parameters['t'] = self.parameters['t'].rstrip('s')
         
         
 class SimultaneousAction(Action):
