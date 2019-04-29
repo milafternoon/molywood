@@ -1,5 +1,5 @@
 import sys
-import subprocess
+import os
 
 if __name__ == "__main__":
     import tcl_actions
@@ -33,11 +33,13 @@ class Script:
             tcl_script = scene.tcl()
             with open('script_{}.tcl'.format(scene.name), 'w') as out:
                 out.write(tcl_script)
-            subprocess.run('vmd -e script_{}.tcl'.format(scene.name))
-        # render then should:
-        # (a) run imagemagick to do post-processing
-        # (b) run ffmpeg to combine frames from (a)
-        # (c) remove individual frames if keepframes=False
+            os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
+        os.system('for i in $(ls *tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; done')
+        # should now run imagemagick to do post-processing
+        os.system('ffmpeg -y -framerate {} -i {}%d.png -profile:v high '
+                  '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" movie.mp4'.format(self.fps, 'scene_1-'))
+        if not self.keepframes:
+            os.system('rm {}*.png'.format('scene_1-'))
     
     def show_script(self):
         """
@@ -212,7 +214,14 @@ class Scene:
             try:
                 action.framenum = int(float(action.parameters['t'])*fps)
             except KeyError:
-                action.framenum = 0
+                try:
+                    frames = [int(x) for x in action.parameters['frames'].split(':')]
+                    if len(frames) == 2:
+                        action.framenum = frames[1] - frames[0]
+                    elif len(frames) == 3:
+                        action.framenum = (frames[1] - frames[0])//2
+                except KeyError:
+                    action.framenum = 0
             cumsum += action.framenum
             
     def tcl(self):
@@ -226,11 +235,12 @@ class Scene:
                               'filebonds 1 autobonds 1 waitfor all\n'.format(self.traj, trajtype)
         elif self.visualization:
             code = open(self.visualization, 'r').readlines()
+            code = ''.join(code)
         else:
             raise ValueError('Either "structure" or "visualization" has to be specified for {}'.format(self.name))
         for action in self.actions:
             code = code + action.tcl()
-        return code
+        return code + '\nexit\n'
         
         
 class Action:
@@ -302,9 +312,6 @@ class SimultaneousAction(Action):
 
 if __name__ == "__main__":
     # this is only a test case for now
-    scr = Script()
-    scr.from_file(sys.argv[1])
-    sc = scr.scenes[0]
-    zin = sc.actions[1]
-    print(zin.tcl())
-    # scr.render()
+    scr = Script(sys.argv[1])
+    # print(scr.scenes[0].tcl())
+    scr.render()

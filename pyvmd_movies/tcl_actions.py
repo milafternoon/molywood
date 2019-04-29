@@ -89,20 +89,35 @@ def logistic_deriv(x, k):
 
 
 def gen_loop(action):
+    setup = gen_setup(action)
     iterators = gen_iterators(action)
     command = gen_command(action)
-    rendermethod = 'Snapshot' if action.scene.script.draft else 'TachyonInternal'
+    rendermethod = 'snapshot' if action.scene.script.draft else 'TachyonInternal'
     extension = 'png' if action.scene.script.draft else 'tga'
     resolution = '-res {} {}'.format(*action.scene.resolution) if not action.scene.script.draft else ''
     code = "\n\nset fr {}\n".format(action.initframe)
+    for act in setup.keys():
+        code = code + setup[act]
     for act in iterators.keys():
         code = code + 'set {} [list {}]\n'.format(act, iterators[act])
-    code = code + 'for {{set i 0}} {{$i < {}}} {{incr i}} {{'.format(action.framenum)
-    code = code + 'puts "rendering frame: $fr\n'
+    code = code + 'for {{set i 0}} {{$i < {}}} {{incr i}} {{\n'.format(action.framenum)
+    code = code + 'puts "rendering frame: $fr"\n'
     for act in command.keys():
         code = code + command[act]
     code = code + 'render {} {}-$fr.{} {}\nincr fr\n}}'.format(rendermethod, action.scene.name, extension, resolution)
     return code
+
+
+def gen_setup(action):
+    """
+    Some actions require a setup step that
+    only has to be performed once; this fn is supposed
+    to take care of such modifications
+    :param action: Action or SimultaneousAction, object to extract info from
+    :return: dict, formatted as label: command
+    """
+    setups = {}
+    return setups
 
 
 def gen_iterators(action):
@@ -116,9 +131,11 @@ def gen_iterators(action):
     iterators = {}
     try:
         sigmoid = action.parameters['sigmoid']
-        sigmoid = False if sigmoid.lower() in ['false', 'f', 'n', 'no'] else False
+        sls = True if sigmoid.lower() == 'sls' else False  # sls stands for smooth-linear-smooth
+        sigmoid = True if sigmoid.lower() in ['true', 't', 'y', 'yes'] else False
     except KeyError:
         sigmoid = True
+        sls = False
     try:
         abruptness = float(action.parameters['abruptness'])
     except KeyError:
@@ -126,21 +143,45 @@ def gen_iterators(action):
     if 'rotate' in action.action_type:
         if sigmoid:
             arr = sigmoid_norm_sum(float(action.parameters['angle']), action.framenum, abruptness)
+        elif sls:
+            arr = sigmoid_norm_sum_linear_mid(float(action.parameters['angle']), action.framenum, abruptness)
         else:
             arr = np.ones(action.framenum) * float(action.parameters['angle'])/action.framenum
-        iterators['rot'] = ' '.join([str(el) for el in arr])
+        iterators['rot'] = ' '.join([str(round(el, 6)) for el in arr])
     if 'zoom_in' in action.action_type:
         if sigmoid:
             arr = sigmoid_norm_prod(float(action.parameters['scale']), action.framenum, abruptness)
         else:
             arr = np.ones(action.framenum) * float(action.parameters['scale'])**(1/action.framenum)
-        iterators['zin'] = ' '.join([str(el) for el in arr])
+        iterators['zin'] = ' '.join([str(round(el, 6)) for el in arr])
     if 'zoom_out' in action.action_type:
         if sigmoid:
             arr = sigmoid_norm_prod(1/float(action.parameters['scale']), action.framenum, abruptness)
         else:
             arr = np.ones(action.framenum) * 1/(float(action.parameters['scale'])**(1/action.framenum))
-        iterators['zou'] = ' '.join([str(el) for el in arr])
+        iterators['zou'] = ' '.join([str(round(el, 6)) for el in arr])
+    if 'make_transparent' in action.action_type:
+        if sigmoid:
+            arr = 1 - np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
+        else:
+            arr = np.linspace(1, 0, action.framenum)
+        iterators['mtr'] = ' '.join([str(round(el, 6)) for el in arr])
+    if 'make_opaque' in action.action_type:
+        if sigmoid:
+            arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
+        else:
+            arr = np.linspace(0, 1, action.framenum)
+        iterators['mop'] = ' '.join([str(round(el, 6)) for el in arr])
+    if 'animate' in action.action_type:
+        try:
+            frames = [int(x) for x in action.parameters['frames'].split(':')]
+        except KeyError:
+            raise ValueError('With "animate", "frames" has to be specified using the syntax begin:end:stride')
+        else:
+            if len(frames) == 2:
+                frames[2] = 1
+            arr = np.arange(frames[0], frames[1], frames[2])
+            iterators['ani'] = ' '.join([str(int(el)) for el in arr])
     return iterators
     
 
@@ -157,12 +198,14 @@ def gen_command(action):
     if 'rotate' in action.action_type:
         axis = action.parameters['axis']
         commands['rot'] = "set t [lindex $rot $i]\nrotate {} by $t\n".format(axis)
-    if 'make_transparent' in action.action_type:
-        # TODO let the user either specify selection number (then duplicate and set material) or material name
-        # TODO but this should be done in gen_iterators to preserve execution order?
-        pass
+    if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
+        material = action.parameters['material']
+        keyw = 'mtr' if 'make_transparent' in action.action_type else 'mop'
+        commands[keyw] = "set t [lindex ${} $i]\nmaterial change opacity {} $t\n".format(keyw, material)
     if 'zoom_in' in action.action_type:
         commands['zin'] = "set t [lindex $zin $i]\nscale by $t\n"
     elif 'zoom_out' in action.action_type:
         commands['zou'] = "set t [lindex $zou $i]\nscale by $t\n"
+    if 'animate' in action.action_type:
+        commands['ani'] = "set t [lindex $ani $i]\nanimate goto $t\n"
     return commands

@@ -8,7 +8,7 @@ $ scene_2         pos=2,1
 
 do_nothing        t=2s
 zoom_in           t=2s scale=2
-make_transparent  t=2s sel=0
+make_transparent  t=2s material=BrushedMetal
 rotate            t=4s angle=360 axis=z
 change_pivot      sel=2
 {
@@ -19,7 +19,8 @@ change_pivot      sel=2
  zoom_out         scale=2;
  rotate           angle=-90 axis=y t=2s
 }
-run_trajectory    t=5s frames=0:80:2 smooth=4
+make_opaque       t=2s material=BrushedMetal
+animate           frames=0:80:2
 
 
 # scene_2
