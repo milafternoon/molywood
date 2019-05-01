@@ -226,6 +226,12 @@ class Scene:
             cumsum += action.framenum
             
     def tcl(self):
+        """
+        This is the top-level function that produces
+        an executable TCL script based on the corresponding
+        action.tcl() functions
+        :return: str, TCL code
+        """
         if self.system:
             filetype = self.system.split('.')[-1]
             code = 'mol new {} type {} first 0 last -1 step 1 ' \
@@ -338,7 +344,6 @@ class SimultaneousAction(Action):
 
 
 if __name__ == "__main__":
-    # this is only a test case for now
     scr = Script(sys.argv[1])
-    print(scr.scenes[0].tcl())
-    #scr.render()
+    # print(scr.scenes[0].tcl())
+    scr.render()
