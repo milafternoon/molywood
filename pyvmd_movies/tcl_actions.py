@@ -198,6 +198,7 @@ def gen_iterators(action):
             arr = np.linspace(0, 1, action.framenum)
         iterators['mop'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'animate' in action.action_type:
+        # TODO enable specification of time ONLY, frames ONLY or time AND frames
         try:
             frames = [int(x) for x in action.parameters['frames'].split(':')]
         except KeyError:

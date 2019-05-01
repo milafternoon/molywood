@@ -4,13 +4,23 @@
 movies, i.e. scripting in TCL, rendering, generating overlays and
 combining frames, as well as merging frames into the final movie.
 
+### Requirements
+
 The internal workflow is as follows: generate the TCL script > run VMD
 to render frames > post-process using imagemagick > combine frames
-using ffmpeg. Therefore, full automation requires that python3, VMD,
-imagemagick and ffmpeg be installed on the system you're using
+using ffmpeg. Therefore, full automation requires that `python3`, `VMD`,
+`imagemagick` and `ffmpeg` be installed on the system you're using
 to produce the movie. The good news is that it can be done externally,
 e.g. on a remote workstation, once you set up the visualization state
 locally.
+
+Note:
++ It is recommended to use `python3` from the Anaconda distribution
+as it contains `numpy` as a pre-installed package.
++ `VMD` can be obtained at `https://www.ks.uiuc.edu/Research/vmd/`.
++ `imagemagick` is installed by default on most Linux distributions.
++ `ffmpeg` can be installed e.g. from the Ubuntu repository by
+typing `sudo apt-get install ffmpeg`.
 
 ### Usage
 
