@@ -89,6 +89,18 @@ def logistic_deriv(x, k):
 
 
 def gen_loop(action):
+    """
+    The main fn that generates TCL code (mostly loops,
+    hence the name). We use three-letter names for
+    variables/dict entries according to the convention:
+    center_view -> ctr;
+    rotate -> rot;
+    zoom_in/zoom_out -> zin/zou;
+    make_transparent/make_opaque -> mtr/mop;
+    animate -> ani
+    :param action: Action or SimultaneousAction, object to extract info from
+    :return: str, formatted TCL code
+    """
     setup = gen_setup(action)
     iterators = gen_iterators(action)
     command = gen_command(action)
@@ -100,23 +112,35 @@ def gen_loop(action):
         code = code + setup[act]
     for act in iterators.keys():
         code = code + 'set {} [list {}]\n'.format(act, iterators[act])
-    code = code + 'for {{set i 0}} {{$i < {}}} {{incr i}} {{\n'.format(action.framenum)
-    code = code + 'puts "rendering frame: $fr"\n'
-    for act in command.keys():
-        code = code + command[act]
-    code = code + 'render {} {}-$fr.{} {}\nincr fr\n}}'.format(rendermethod, action.scene.name, extension, resolution)
+    if action.framenum > 0:
+        code = code + 'for {{set i 0}} {{$i < {}}} {{incr i}} {{\n'.format(action.framenum)
+        code = code + '  puts "rendering frame: $fr"\n'
+        for act in command.keys():
+            code = code + '  ' + command[act]
+        code = code + '  render {} {}-$fr.{} {}\n  incr fr\n}}'.format(rendermethod, action.scene.name,
+                                                                     extension, resolution)
     return code
 
 
 def gen_setup(action):
     """
-    Some actions require a setup step that
+    Some actions (e.g. centering) require a setup step that
     only has to be performed once; this fn is supposed
-    to take care of such modifications
+    to take care of such thingies
     :param action: Action or SimultaneousAction, object to extract info from
     :return: dict, formatted as label: command
     """
     setups = {}
+    if 'center_view' in action.action_type:
+        try:
+            new_center_selection = action.parameters['selection']
+        except KeyError:
+            raise ValueError('With center_view, you need to specify a selection (vmd-compatible syntax, in quot marks)')
+        else:
+            setups['ctr'] = 'set csel [atomselect top "{}"]\nset gc [veczero]\nforeach coord [$csel get {{x y z}}] ' \
+                            '{{\n  set gc [vecadd $gc $coord]\n}}\n' \
+                            'set cent [vecscale [expr 1.0 /[$csel num]] $gc]\n' \
+                            'molinfo top set center [list $cent]\n'.format(new_center_selection)
     return setups
 
 
@@ -129,6 +153,7 @@ def gen_iterators(action):
     :return: dict, formatted as label: iterator
     """
     iterators = {}
+    num_precision = 5
     try:
         sigmoid = action.parameters['sigmoid']
         sls = True if sigmoid.lower() == 'sls' else False  # sls stands for smooth-linear-smooth
@@ -147,31 +172,31 @@ def gen_iterators(action):
             arr = sigmoid_norm_sum_linear_mid(float(action.parameters['angle']), action.framenum, abruptness)
         else:
             arr = np.ones(action.framenum) * float(action.parameters['angle'])/action.framenum
-        iterators['rot'] = ' '.join([str(round(el, 6)) for el in arr])
+        iterators['rot'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'zoom_in' in action.action_type:
         if sigmoid:
             arr = sigmoid_norm_prod(float(action.parameters['scale']), action.framenum, abruptness)
         else:
             arr = np.ones(action.framenum) * float(action.parameters['scale'])**(1/action.framenum)
-        iterators['zin'] = ' '.join([str(round(el, 6)) for el in arr])
+        iterators['zin'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'zoom_out' in action.action_type:
         if sigmoid:
             arr = sigmoid_norm_prod(1/float(action.parameters['scale']), action.framenum, abruptness)
         else:
             arr = np.ones(action.framenum) * 1/(float(action.parameters['scale'])**(1/action.framenum))
-        iterators['zou'] = ' '.join([str(round(el, 6)) for el in arr])
+        iterators['zou'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'make_transparent' in action.action_type:
         if sigmoid:
             arr = 1 - np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
         else:
             arr = np.linspace(1, 0, action.framenum)
-        iterators['mtr'] = ' '.join([str(round(el, 6)) for el in arr])
+        iterators['mtr'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'make_opaque' in action.action_type:
         if sigmoid:
             arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
         else:
             arr = np.linspace(0, 1, action.framenum)
-        iterators['mop'] = ' '.join([str(round(el, 6)) for el in arr])
+        iterators['mop'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'animate' in action.action_type:
         try:
             frames = [int(x) for x in action.parameters['frames'].split(':')]
@@ -179,7 +204,7 @@ def gen_iterators(action):
             raise ValueError('With "animate", "frames" has to be specified using the syntax begin:end:stride')
         else:
             if len(frames) == 2:
-                frames[2] = 1
+                frames.append(1)
             arr = np.arange(frames[0], frames[1], frames[2])
             iterators['ani'] = ' '.join([str(int(el)) for el in arr])
     return iterators
@@ -197,15 +222,15 @@ def gen_command(action):
     commands = {}
     if 'rotate' in action.action_type:
         axis = action.parameters['axis']
-        commands['rot'] = "set t [lindex $rot $i]\nrotate {} by $t\n".format(axis)
+        commands['rot'] = "set t [lindex $rot $i]\n  rotate {} by $t\n".format(axis)
     if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
         material = action.parameters['material']
         keyw = 'mtr' if 'make_transparent' in action.action_type else 'mop'
-        commands[keyw] = "set t [lindex ${} $i]\nmaterial change opacity {} $t\n".format(keyw, material)
+        commands[keyw] = "set t [lindex ${} $i]\n  material change opacity {} $t\n".format(keyw, material)
     if 'zoom_in' in action.action_type:
-        commands['zin'] = "set t [lindex $zin $i]\nscale by $t\n"
+        commands['zin'] = "set t [lindex $zin $i]\n  scale by $t\n"
     elif 'zoom_out' in action.action_type:
-        commands['zou'] = "set t [lindex $zou $i]\nscale by $t\n"
+        commands['zou'] = "set t [lindex $zou $i]\n  scale by $t\n"
     if 'animate' in action.action_type:
-        commands['ani'] = "set t [lindex $ani $i]\nanimate goto $t\n"
+        commands['ani'] = "set t [lindex $ani $i]\n  animate goto $t\n"
     return commands

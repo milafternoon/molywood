@@ -14,6 +14,7 @@ class Script:
     panels, overlays etc.)
     """
     def __init__(self, scriptfile=None):
+        self.name = 'movie'
         self.scenes = []
         self.directives = {}
         self.fps = 20
@@ -276,13 +277,39 @@ class Action:
         :param command: str, description of the action
         :return: None
         """
-        spl = command.split()
+        spl = self.split_input_line(command)
         self.action_type = spl[0]
-        self.parameters.update({prm.split('=')[0]: prm.split('=')[1] for prm in spl[1:]})
+        self.parameters.update({prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]})
         if 't' in self.parameters.keys():
             self.parameters['t'] = self.parameters['t'].rstrip('s')
+
+    @staticmethod
+    def split_input_line(line):
+        """
+        a modified string splitter that doesn't split
+        words encircled in quotation marks
+        :param line: str, line to be split
+        :return: list of strings, contains individual words
+        """
+        line = line.strip()
+        words = []
+        open_quotation = False
+        previous = 0
+        for current, char in enumerate(line):
+            if char in ["'", '"']:
+                if not open_quotation:
+                    open_quotation = True
+                else:
+                    open_quotation = False
+            if (char == ' ' and not open_quotation) or current == len(line) - 1:
+                word = line[previous:current+1].strip()
+                if word:
+                    words.append(word)
+                previous = current
+        print(line, words)
+        return words
         
-        
+
 class SimultaneousAction(Action):
     """
     Intended to represent a number of actions
@@ -313,5 +340,5 @@ class SimultaneousAction(Action):
 if __name__ == "__main__":
     # this is only a test case for now
     scr = Script(sys.argv[1])
-    # print(scr.scenes[0].tcl())
-    scr.render()
+    print(scr.scenes[0].tcl())
+    #scr.render()
