@@ -215,14 +215,7 @@ class Scene:
             try:
                 action.framenum = int(float(action.parameters['t'])*fps)
             except KeyError:
-                try:
-                    frames = [int(x) for x in action.parameters['frames'].split(':')]
-                    if len(frames) == 2:
-                        action.framenum = frames[1] - frames[0]
-                    elif len(frames) == 3:
-                        action.framenum = (frames[1] - frames[0])//2
-                except KeyError:
-                    action.framenum = 0
+                action.framenum = 0
             cumsum += action.framenum
             
     def tcl(self):

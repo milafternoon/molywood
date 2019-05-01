@@ -4,6 +4,11 @@
 movies, i.e. scripting in TCL, rendering, generating overlays and
 combining frames, as well as merging frames into the final movie.
 
+We try to simplify the movie making syntax to supersede the existing
+TCL UserAni library, and add extended functionalities such as
+animating trajectory data with matplotlib, adding insets or
+making multi-panel movies.
+
 ### Requirements
 
 The internal workflow is as follows: generate the TCL script > run VMD
@@ -18,7 +23,8 @@ Note:
 + It is recommended to use `python3` from the Anaconda distribution
 as it contains `numpy` as a pre-installed package.
 + `VMD` can be obtained at `https://www.ks.uiuc.edu/Research/vmd/`.
-+ `imagemagick` is installed by default on most Linux distributions.
++ `imagemagick` is installed by default on most Linux distributions;
+run e.g. `convert` to make sure it is available on your machine.
 + `ffmpeg` can be installed e.g. from the Ubuntu repository by
 typing `sudo apt-get install ffmpeg`.
 
@@ -41,7 +47,7 @@ Sample movie scripts are available in the `examples` directory.
 
 ### List of available action keywords and parameters:
 
-+ animate (frames=init_frame:final_frame\[:stride\], smoothing)
++ animate (frames=init_frame:final_frame)
 + rotate (axis=x/y/z, angle=..., t=...s, \[sigmoid=**t**/f/sls\])
 + zoom_in/zoom_out (scale=..., t=...s, \[sigmoid=**t**/f/sls\])
 + make_transparent/make_opaque (material=..., t=...s,  \[sigmoid=**t**/f/sls\])
@@ -55,6 +61,8 @@ Sample movie scripts are available in the `examples` directory.
 + layout (not implemented yet)
 + scene_identifier (visualization=...)
 
+(instead of scene_identifier, you should put the actual identifier
+of the scene in question, e.g. `scene_1` in the example below)
 
 ### Notes on input formatting:
 

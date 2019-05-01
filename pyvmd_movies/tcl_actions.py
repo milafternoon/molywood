@@ -141,6 +141,7 @@ def gen_setup(action):
                             '{{\n  set gc [vecadd $gc $coord]\n}}\n' \
                             'set cent [vecscale [expr 1.0 /[$csel num]] $gc]\n' \
                             'molinfo top set center [list $cent]\n'.format(new_center_selection)
+    # TODO add smoothing in animate?
     return setups
 
 
@@ -198,16 +199,9 @@ def gen_iterators(action):
             arr = np.linspace(0, 1, action.framenum)
         iterators['mop'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'animate' in action.action_type:
-        # TODO enable specification of time ONLY, frames ONLY or time AND frames
-        try:
-            frames = [int(x) for x in action.parameters['frames'].split(':')]
-        except KeyError:
-            raise ValueError('With "animate", "frames" has to be specified using the syntax begin:end:stride')
-        else:
-            if len(frames) == 2:
-                frames.append(1)
-            arr = np.arange(frames[0], frames[1], frames[2])
-            iterators['ani'] = ' '.join([str(int(el)) for el in arr])
+        animation_frames = [int(x) for x in action.parameters['frames'].split(':')]
+        arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
+        iterators['ani'] = ' '.join([str(int(el)) for el in arr])
     return iterators
     
 
