@@ -60,7 +60,7 @@ Sample movie scripts are available in the `examples` directory.
 
 + global (\[fps=20, draft=t/**f**, keepframes=t/**f**, name=**movie**\])
 + layout (not implemented yet)
-+ scene_identifier (visualization=...)
++ scene_identifier (visualization=..., \[position=**1,1**, resolution=**1000,1000**\])
 
 (instead of scene_identifier, you should put the actual identifier
 of the scene in question, e.g. `scene_1` in the example below)

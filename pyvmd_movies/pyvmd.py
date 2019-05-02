@@ -3,8 +3,10 @@ import os
 
 if __name__ == "__main__":
     import tcl_actions
+    import process_graphics
 else:
     import pyvmd_movies.tcl_actions as tcl_actions
+    import pyvmd_movies.process_graphics as process_graphics
 
 
 class Script:
@@ -35,8 +37,9 @@ class Script:
             with open('script_{}.tcl'.format(scene.name), 'w') as out:
                 out.write(tcl_script)
             os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
-        os.system('for i in $(ls *tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; done')
-        # should now run imagemagick to do post-processing
+        os.system('for i in $(ls *tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; '
+                  'rm $(echo $i | sed "s/tga/dat/g"); done')
+        process_graphics.postprocessor(self)
         os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
                   '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" movie.mp4'.format(self.fps, self.name))
         if not self.keepframes:
@@ -111,23 +114,23 @@ class Script:
         :return: list of Scene objects
         """
         objects = []
-        struct, traj, tcl = None, None, None
+        pos, tcl, res = [1, 1], None, [1000, 1000]
         for sub in scenes.keys():
             if scenes[sub]:
                 if sub in self.directives.keys():
                     try:
-                        struct = self.directives[sub]['structure']
-                    except KeyError:
-                        pass
-                    try:
-                        traj = self.directives[sub]['trajectory']
-                    except KeyError:
-                        pass
-                    try:
                         tcl = self.directives[sub]['visualization']
                     except KeyError:
                         pass
-                objects.append(Scene(self, sub, struct, traj, tcl))
+                    try:
+                        pos = [int(x) for x in self.directives[sub]['position'].split(',')]
+                    except KeyError:
+                        pass
+                    try:
+                        res = [int(x) for x in self.directives[sub]['resolution'].split(',')]
+                    except KeyError:
+                        pass
+                objects.append(Scene(self, sub, tcl, res, pos))
                 for action in scenes[sub]:
                     objects[-1].add_action(action)
         return objects
@@ -154,6 +157,8 @@ class Script:
             pass
         for scene in self.scenes:
             scene.calc_framenum()
+            if self.draft:
+                scene.resolution = [200, 200]
         
 
 class Scene:
@@ -162,23 +167,14 @@ class Scene:
     molecular system, and hence has to be initialized
     with a valid input file
     """
-    def __init__(self, script, name, molecule_file=None, traj=None, tcl=None, resolution=(1000, 1000)):
-        self.script = script
+    def __init__(self, script, name, tcl=None, resolution=(1000, 1000), position=(1, 1)):
+        self.script = script  # TODO enable user to speficy resolution globally in a consistent way
         self.name = name
-        self.system = molecule_file
-        self.traj = traj
         self.visualization = tcl
         self.actions = []
         self.resolution = resolution
-    
-    def add_traj(self, traj):
-        """
-        Allows to add a trajectory to VMD after the
-        object was initialized
-        :param traj: str, trajectory filename
-        :return: None
-        """
-        self.traj = traj
+        self.position = position
+        self.total_frames = 0
     
     def add_action(self, description):
         """
@@ -217,6 +213,7 @@ class Scene:
             except KeyError:
                 action.framenum = 0
             cumsum += action.framenum
+        self.total_frames = cumsum
             
     def tcl(self):
         """
@@ -225,21 +222,16 @@ class Scene:
         action.tcl() functions
         :return: str, TCL code
         """
-        if self.system:
-            filetype = self.system.split('.')[-1]
-            code = 'mol new {} type {} first 0 last -1 step 1 ' \
-                   'filebonds 1 autobonds 1 waitfor all\n'.format(self.system, filetype)
-            if self.traj:
-                trajtype = self.traj.split('.')[-1]
-                code = code + 'mol addfile {} type {} first 0 last -1 step 1 ' \
-                              'filebonds 1 autobonds 1 waitfor all\n'.format(self.traj, trajtype)
-        elif self.visualization:
+        if self.visualization:
             code = open(self.visualization, 'r').readlines()
             code = ''.join(code)
+            code += 'axes location off\n'
+            code += 'render options Tachyon "/usr/local/lib/vmd/tachyon_LINUXAMD64" -aasamples 12 %s -format ' \
+                    'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
+            for action in self.actions:
+                code = code + action.tcl()
         else:
-            raise ValueError('Either "structure" or "visualization" has to be specified for {}'.format(self.name))
-        for action in self.actions:
-            code = code + action.tcl()
+            code = ''
         return code + '\nexit\n'
         
         
@@ -335,19 +327,6 @@ class SimultaneousAction(Action):
             super().parse(action)
         self.action_type = [action.split()[0] for action in actions]
 
-
-def postprocessor(script):
-    try:
-        layout_dirs = script.directives['layout']
-    except KeyError:
-        layout_dirs = None
-    if len(script.scenes) == 1 and not layout_dirs:
-        scene = script.scenes[0].name
-        os.system('for i in $(ls {}-*png); do mv $i $(echo $i | sed "s/{}/{}/g"); done'.format(scene, scene,
-                                                                                               script.name))
-    # TODO add simple composing of frames using compose and layout
-    # TODO implement a basic fn that just copies a specified image
-    # TODO think of adding insets
 
 if __name__ == "__main__":
     scr = Script(sys.argv[1])

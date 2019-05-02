@@ -104,9 +104,7 @@ def gen_loop(action):
     setup = gen_setup(action)
     iterators = gen_iterators(action)
     command = gen_command(action)
-    rendermethod = 'snapshot' if action.scene.script.draft else 'TachyonInternal'
-    extension = 'png' if action.scene.script.draft else 'tga'
-    resolution = '-res {} {}'.format(*action.scene.resolution) if not action.scene.script.draft else ''
+    rendermethod = 'Tachyon'
     code = "\n\nset fr {}\n".format(action.initframe)
     for act in setup.keys():
         code = code + setup[act]
@@ -117,8 +115,10 @@ def gen_loop(action):
         code += '  puts "rendering frame: $fr"\n'
         for act in command.keys():
             code = code + '  ' + command[act]
-        code += '  render {} {}-$fr.{} {}\n  incr fr\n}}'.format(rendermethod, action.scene.name,
-                                                                 extension, resolution)
+        code += '  render {rm} {sc}-$fr.dat\n  "/usr/local/lib/vmd/tachyon_LINUXAMD64" ' \
+                '-aasamples 12 {sc}-$fr.dat -format TARGA -o {sc}-$fr.tga -res {rs}' \
+                '\n  incr fr\n}}'.format(rm=rendermethod, sc=action.scene.name,
+                                         rs=' '.join(str(x) for x in action.scene.resolution))
     return code
 
 
@@ -148,7 +148,8 @@ def gen_setup(action):
             pass
         else:
             setups['ani'] = 'set mtop [molinfo top]\nset nrep [molinfo $mtop get numreps]\n' \
-                            'for {{set i 0}} {{$i < $nrep}} {{incr i}} {{\nmol smoothrep $mtop $i {}\n}}'.format(smooth)
+                            'for {{set i 0}} {{$i < $nrep}} {{incr i}} {{\n' \
+                            'mol smoothrep $mtop $i {}\n}}\n'.format(smooth)
     return setups
 
 
