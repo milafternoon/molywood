@@ -7,7 +7,7 @@ def sigmoid_increments(n_points, abruptness):
     growth from 0 to sum over n_points
     :param n_points: int, number of increments
     :param abruptness: float, how fast the transition is
-    :return: np.array, array of increments
+    :return: numpy.array, array of increments
     """
     scale_range = (-5, 5)
     points = np.linspace(*scale_range, n_points)
@@ -21,7 +21,7 @@ def sigmoid_norm_sum(cumsum, n_points, abruptness=1):
     :param cumsum: float, cumulative sum of the increments
     :param n_points: int, number of increments
     :param abruptness: float, how fast the transition is
-    :return: np.array, array of increments
+    :return: numpy.array, array of increments
     """
     increments = sigmoid_increments(n_points, abruptness)
     return cumsum*increments/np.sum(increments)
@@ -33,7 +33,7 @@ def sigmoid_norm_prod(cumprod, n_points, abruptness=1):
     :param cumprod: float, cumulative sum of the increments
     :param n_points: int, number of increments
     :param abruptness: float, how fast the transition is
-    :return: np.array, array of increments
+    :return: numpy.array, array of increments
     """
     increments = 1 + sigmoid_increments(n_points, abruptness)
     prod = np.prod(increments)
@@ -53,7 +53,7 @@ def sigmoid_norm_sum_linear_mid(cumsum, n_points, abruptness=1, fraction_linear=
     :param n_points: int, number of increments
     :param abruptness: float, how fast the transition is
     :param fraction_linear: float, fraction of the action spent in the linear regime
-    :return: np.array, array of increments
+    :return: numpy.array, array of increments
     """
     n_points_sigm = int(n_points * (1-fraction_linear))
     n_points_linear = n_points - n_points_sigm
@@ -71,9 +71,9 @@ def logistic(x, k):
     The logistic fn used to smoothen transitions
     :param x: abscissa
     :param k: transition abruptness
-    :return: float or array, value of the logistic fn
+    :return: numpy.array, values of the logistic fn
     """
-    return 1/(1+np.exp(-k*x))
+    return np.array(1/(1+np.exp(-k*x)))
 
 
 def logistic_deriv(x, k):
@@ -82,10 +82,10 @@ def logistic_deriv(x, k):
     (in a discretized version yields single-step increments)
     :param x: abscissa
     :param k: transition abruptness
-    :return: float or array, value of the logistic fn derivative
+    :return: numpy.array, values of the logistic fn derivative
     """
     logi = logistic(x, k)
-    return logi*(1-logi)
+    return np.array(logi*(1-logi))
 
 
 def gen_loop(action):
@@ -111,14 +111,14 @@ def gen_loop(action):
     for act in setup.keys():
         code = code + setup[act]
     for act in iterators.keys():
-        code = code + 'set {} [list {}]\n'.format(act, iterators[act])
+        code += 'set {} [list {}]\n'.format(act, iterators[act])
     if action.framenum > 0:
-        code = code + 'for {{set i 0}} {{$i < {}}} {{incr i}} {{\n'.format(action.framenum)
-        code = code + '  puts "rendering frame: $fr"\n'
+        code += 'for {{set i 0}} {{$i < {}}} {{incr i}} {{\n'.format(action.framenum)
+        code += '  puts "rendering frame: $fr"\n'
         for act in command.keys():
             code = code + '  ' + command[act]
-        code = code + '  render {} {}-$fr.{} {}\n  incr fr\n}}'.format(rendermethod, action.scene.name,
-                                                                     extension, resolution)
+        code += '  render {} {}-$fr.{} {}\n  incr fr\n}}'.format(rendermethod, action.scene.name,
+                                                                 extension, resolution)
     return code
 
 
@@ -141,7 +141,14 @@ def gen_setup(action):
                             '{{\n  set gc [vecadd $gc $coord]\n}}\n' \
                             'set cent [vecscale [expr 1.0 /[$csel num]] $gc]\n' \
                             'molinfo top set center [list $cent]\n'.format(new_center_selection)
-    # TODO add smoothing in animate?
+    if 'animate' in action.action_type:
+        try:
+            smooth = action.parameters['smooth']
+        except KeyError:
+            pass
+        else:
+            setups['ani'] = 'set mtop [molinfo top]\nset nrep [molinfo $mtop get numreps]\n' \
+                            'for {{set i 0}} {{$i < $nrep}} {{incr i}} {{\nmol smoothrep $mtop $i {}\n}}'.format(smooth)
     return setups
 
 

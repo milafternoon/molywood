@@ -37,8 +37,8 @@ class Script:
             os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
         os.system('for i in $(ls *tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; done')
         # should now run imagemagick to do post-processing
-        os.system('ffmpeg -y -framerate {} -i {}%d.png -profile:v high '
-                  '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" movie.mp4'.format(self.fps, 'scene_1-'))
+        os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
+                  '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" movie.mp4'.format(self.fps, self.name))
         if not self.keepframes:
             os.system('rm {}*.png'.format('scene_1-'))
     
@@ -74,7 +74,7 @@ class Script:
                 if line.startswith('{'):  # with a possibility of multi-actions wrapped into curly brackets
                     multiline = line
                 elif multiline and '}' not in line:
-                    multiline = multiline + line
+                    multiline += line
                 elif multiline and '}' in line:
                     subscripts[current_sub].append(multiline + line)
                     multiline = None
@@ -335,6 +335,19 @@ class SimultaneousAction(Action):
             super().parse(action)
         self.action_type = [action.split()[0] for action in actions]
 
+
+def postprocessor(script):
+    try:
+        layout_dirs = script.directives['layout']
+    except KeyError:
+        layout_dirs = None
+    if len(script.scenes) == 1 and not layout_dirs:
+        scene = script.scenes[0].name
+        os.system('for i in $(ls {}-*png); do mv $i $(echo $i | sed "s/{}/{}/g"); done'.format(scene, scene,
+                                                                                               script.name))
+    # TODO add simple composing of frames using compose and layout
+    # TODO implement a basic fn that just copies a specified image
+    # TODO think of adding insets
 
 if __name__ == "__main__":
     scr = Script(sys.argv[1])

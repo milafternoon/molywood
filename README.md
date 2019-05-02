@@ -47,17 +47,18 @@ Sample movie scripts are available in the `examples` directory.
 
 ### List of available action keywords and parameters:
 
-+ animate (frames=init_frame:final_frame)
++ animate (frames=init_frame:final_frame, t=...s, \[smooth=...\])
 + rotate (axis=x/y/z, angle=..., t=...s, \[sigmoid=**t**/f/sls\])
 + zoom_in/zoom_out (scale=..., t=...s, \[sigmoid=**t**/f/sls\])
 + make_transparent/make_opaque (material=..., t=...s,  \[sigmoid=**t**/f/sls\])
 + center_view (selection='...')
++ do_nothing (t=...s)
 
 (Values in bold font indicate defaults when parameters are optional)
 
 ### List of available global keywords and parameters:
 
-+ global (fps=..., draft=t/**f**, keepframes=t/**f**)
++ global (\[fps=20, draft=t/**f**, keepframes=t/**f**, name=**movie**\])
 + layout (not implemented yet)
 + scene_identifier (visualization=...)
 

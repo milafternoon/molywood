@@ -1,5 +1,3 @@
-$ global          fps=15  draft=f  keepframes=f
-$ layout          rows=1  cols=1
 $ scene_1         visualization=test.vmd
 
 
