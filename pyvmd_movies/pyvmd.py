@@ -39,6 +39,7 @@ class Script:
             os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
         os.system('for i in $(ls *tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; '
                   'rm $(echo $i | sed "s/tga/dat/g"); done')
+        # at this stage, each scene should have all its initial frames rendered
         process_graphics.postprocessor(self)
         os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
                   '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" movie.mp4'.format(self.fps, self.name))
