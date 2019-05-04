@@ -32,6 +32,7 @@ class Script:
         ffmpeg to assemble the movie frame by frame)
         :return: None
         """
+        # the part below controls TCL/VMD rendering
         for scene in self.scenes:
             tcl_script = scene.tcl()
             with open('script_{}.tcl'.format(scene.name), 'w') as out:
@@ -39,6 +40,7 @@ class Script:
             os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
         os.system('for i in $(ls *tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; '
                   'rm $(echo $i | sed "s/tga/dat/g"); done')
+        # here we do simple picture rendering
         # at this stage, each scene should have all its initial frames rendered
         process_graphics.postprocessor(self)
         os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
@@ -115,7 +117,7 @@ class Script:
         :return: list of Scene objects
         """
         objects = []
-        pos, tcl, res = [1, 1], None, [1000, 1000]
+        pos, res, tcl, py, fig = [1, 1], [1000, 1000], None, None, None
         for sub in scenes.keys():
             if scenes[sub]:
                 if sub in self.directives.keys():
@@ -131,7 +133,17 @@ class Script:
                         res = [int(x) for x in self.directives[sub]['resolution'].split(',')]
                     except KeyError:
                         pass
-                objects.append(Scene(self, sub, tcl, res, pos))
+                    try:
+                        py = self.directives[sub]['python']
+                    except KeyError:
+                        pass
+                    try:
+                        fig = self.directives[sub]['figure']  # TODO possibly have many figures, or global list of figs?
+                    except KeyError:
+                        pass
+                if not (fig or py or tcl):
+                    raise ValueError("Scene {} does not specify any graphical content".format(scenes[sub].name))
+                objects.append(Scene(self, sub, tcl, py, fig, res, pos))
                 for action in scenes[sub]:
                     objects[-1].add_action(action)
         return objects
@@ -168,13 +180,15 @@ class Scene:
     molecular system, and hence has to be initialized
     with a valid input file
     """
-    def __init__(self, script, name, tcl=None, resolution=(1000, 1000), position=(1, 1)):
-        self.script = script  # TODO enable user to speficy resolution globally in a consistent way
+    def __init__(self, script, name, tcl=None, py=None, fig=None, resolution=(1000, 1000), position=(1, 1)):
+        self.tcl_code = script  # TODO enable user to specify resolution globally in a consistent way
         self.name = name
         self.visualization = tcl
         self.actions = []
         self.resolution = resolution
         self.position = position
+        self.figure = fig
+        self.py_code = py
         self.total_frames = 0
     
     def add_action(self, description):
@@ -205,7 +219,7 @@ class Scene:
         not all will have a non-zero framenum
         :return: None
         """
-        fps = self.script.fps
+        fps = self.tcl_code.fps
         cumsum = 0
         for action in self.actions:
             action.initframe = cumsum
@@ -230,7 +244,7 @@ class Scene:
             code += 'render options Tachyon "/usr/local/lib/vmd/tachyon_LINUXAMD64" -aasamples 12 %s -format ' \
                     'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
             for action in self.actions:
-                code = code + action.tcl()
+                code = code + action.generate()
         else:
             code = ''
         return code + '\nexit\n'
@@ -247,20 +261,25 @@ class Action:
         self.description = description
         self.action_type = None
         self.parameters = {}  # will be a dict of action parameters
-        self.initframe = None  # should contain an initial frame number in the overall movie's numbering
-        self.framenum = None
+        self.initframe = None  # contains the initial frame number in the overall movie's numbering
+        self.framenum = None  # total frames count for this action
         self.parse(description)
     
     def __repr__(self):
         return self.description.split()[0]
     
-    def tcl(self):
+    def generate(self):
         """
         Should produce the TCL code that will
         produce the action in question
         :return: str, TCL code
         """
-        return tcl_actions.gen_loop(self)
+        if self.action_type in ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
+                                'make_opaque', 'center_view']:
+            return tcl_actions.gen_loop(self)
+        elif self.action_type in ['show_figure']:
+            process_graphics.gen_fig(self)
+            return ''
     
     def parse(self, command):
         """

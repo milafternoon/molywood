@@ -52,6 +52,7 @@ Sample movie scripts are available in the `examples` directory.
 + zoom_in/zoom_out (scale=..., t=...s, \[sigmoid=**t**/f/sls\])
 + make_transparent/make_opaque (material=..., t=...s,  \[sigmoid=**t**/f/sls\])
 + center_view (selection='...')
++ show_figure (t=...s)
 + do_nothing (t=...s)
 
 (Values in bold font indicate defaults when parameters are optional)
