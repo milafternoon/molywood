@@ -18,6 +18,7 @@ class Script:
     def __init__(self, scriptfile=None):
         self.name = 'movie'
         self.scenes = []
+        self.figures = []
         self.directives = {}
         self.fps = 20
         self.draft = False
@@ -34,7 +35,7 @@ class Script:
         """
         # the part below controls TCL/VMD rendering
         for scene in self.scenes:
-            tcl_script = scene.tcl()
+            tcl_script = scene.tcl()  # TODO don't run VMD if nothing to do there
             with open('script_{}.tcl'.format(scene.name), 'w') as out:
                 out.write(tcl_script)
             os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
@@ -117,7 +118,7 @@ class Script:
         :return: list of Scene objects
         """
         objects = []
-        pos, res, tcl, py, fig = [1, 1], [1000, 1000], None, None, None
+        pos, res, tcl, py = [1, 1], [1000, 1000], None, None
         for sub in scenes.keys():
             if scenes[sub]:
                 if sub in self.directives.keys():
@@ -137,13 +138,9 @@ class Script:
                         py = self.directives[sub]['python']
                     except KeyError:
                         pass
-                    try:
-                        fig = self.directives[sub]['figure']  # TODO possibly have many figures, or global list of figs?
-                    except KeyError:
-                        pass
-                if not (fig or py or tcl):
+                if not (py or tcl):
                     raise ValueError("Scene {} does not specify any graphical content".format(scenes[sub].name))
-                objects.append(Scene(self, sub, tcl, py, fig, res, pos))
+                objects.append(Scene(self, sub, tcl, py, res, pos))
                 for action in scenes[sub]:
                     objects[-1].add_action(action)
         return objects
@@ -168,6 +165,10 @@ class Script:
                 else False
         except KeyError:
             pass
+        try:
+            self.figures = self.directives['figure']['files'].split(',')
+        except KeyError:
+            pass
         for scene in self.scenes:
             scene.calc_framenum()
             if self.draft:
@@ -180,14 +181,13 @@ class Scene:
     molecular system, and hence has to be initialized
     with a valid input file
     """
-    def __init__(self, script, name, tcl=None, py=None, fig=None, resolution=(1000, 1000), position=(1, 1)):
-        self.tcl_code = script  # TODO enable user to specify resolution globally in a consistent way
+    def __init__(self, script, name, tcl=None, py=None, resolution=(1000, 1000), position=(1, 1)):
+        self.script = script  # TODO enable user to specify resolution globally in a consistent way
         self.name = name
         self.visualization = tcl
         self.actions = []
         self.resolution = resolution
         self.position = position
-        self.figure = fig
         self.py_code = py
         self.total_frames = 0
     
@@ -219,7 +219,7 @@ class Scene:
         not all will have a non-zero framenum
         :return: None
         """
-        fps = self.tcl_code.fps
+        fps = self.script.fps
         cumsum = 0
         for action in self.actions:
             action.initframe = cumsum

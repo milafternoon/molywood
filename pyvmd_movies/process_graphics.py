@@ -3,23 +3,23 @@ import os
 
 def postprocessor(script):
     try:
-        layout_dirs = script.directives['layout']
+        layout_dirs = script.directives['layout']  # layout controls composition of panels
     except KeyError:
         layout_dirs = None
     try:
-        inset_dirs = script.directives['inset']
+        inset_dirs = script.directives['inset']  # inset controls adding overlays on individual panels
     except KeyError:
         inset_dirs = None
         
     if len(script.scenes) == 1 and not layout_dirs:  # simplest case: one scene, no add-ons
         scene = script.scenes[0].name
         for fr in range(script.scenes[0].total_frames):
-            os.system('mv {}-fr{}.png {}-{}.png'.format(scene, fr, script.name, fr))
+            os.system('mv {}-{}.png {}-{}.png'.format(scene, fr, script.name, fr))
             
-    elif layout_dirs and len(script.scenes) > 1:  # here we have multiple scenes, but should insets go earlier?
-        # TODO if one has less frames than the other, copy last frame to make counts equal
-        # for now we just assume frame counts are equal:
-        assert all([sc.total_frames == script.scenes[0].total_frames for sc in script.scenes])
+    elif layout_dirs and len(script.scenes) > 1:  # here we parse multiple scenes: insets should go earlier!
+        # if one has less frames than the other, copy last frame (N-n) times to make counts equal:
+        if not all([sc.total_frames == script.scenes[0].total_frames for sc in script.scenes]):
+            equalize_frames(script)
         nrows = int(layout_dirs['rows'])
         ncols = int(layout_dirs['columns'])
         labels_matrix = [[] for r in range(nrows)]
@@ -42,11 +42,13 @@ def postprocessor(script):
         for r in range(nrows):
             convert_command += ' \( '
             for c in range(ncols):
-                convert_command += labels_matrix[r][c] + '-fr{}.png '
+                convert_command += labels_matrix[r][c] + '-{}.png '
             convert_command += ' +append \) '
         convert_command += ' -append '
         for fr in range(script.scenes[0].total_frames):
-            os.system('convert ' + convert_command.format(fr) + '{}-{}.png'.format(script.name, fr))
+            frames = [fr] * (nrows*ncols)
+            print('fff', frames, convert_command)
+            os.system('convert ' + convert_command.format(*frames) + '{}-{}.png'.format(script.name, fr))
             
 
 def gen_fig(action):
@@ -58,9 +60,19 @@ def gen_fig(action):
     :return: None
     """
     if action.action_type == 'show_figure':
+        fig_file = action.scene.script.figures[int(action.parameters['figure_index'])]
         for fr in range(action.initframe, action.initframe + action.framenum):
-            os.system('convert {} {}-{}.png'.format(action.scene.figure, action.scene.name, fr))
-            # TODO think about the resolution (sung along to Beatles)
+            os.system('convert {} {}-{}.png'.format(fig_file, action.scene.name, fr))
+            # TODO let's think about the resolution (sung along to Beatles?)
 
 # TODO think of adding insets; need to be done before postprocessor() is run
 
+
+def equalize_frames(script):
+    nframes = [sc.total_frames for sc in script.scenes]
+    names = [sc.name for sc in script.scenes]
+    highest = max(nframes)
+    for n, nf in enumerate(nframes):
+        if nf < highest:
+            for i in range(nf, highest):
+                os.system('cp {}-{}.png {}-{}.png'.format(names[n], nf-1, names[n], i))

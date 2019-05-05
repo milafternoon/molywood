@@ -1,7 +1,8 @@
-$ global          fps=20  draft=false  keepframes=true
+$ global          fps=10  draft=true  keepframes=false
 $ layout          rows=1  columns=2
+$ figure          files=logo_big.png
 $ scene_1         visualization=vis.vmd  position=0,0
-$ scene_2         background=logo_big.png position=0,1
+$ scene_2         position=0,1
 
 
 # scene_1
@@ -25,5 +26,4 @@ animate           t=5s frames=0:80 smooth=3
 
 # scene_2
 
-draw_figure       t=14s
-plot_data         t=2s  mpl=plot.py  data=data
+show_figure       t=21s figure_index=0

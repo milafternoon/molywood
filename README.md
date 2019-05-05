@@ -52,7 +52,7 @@ Sample movie scripts are available in the `examples` directory.
 + zoom_in/zoom_out (scale=..., t=...s, \[sigmoid=**t**/f/sls\])
 + make_transparent/make_opaque (material=..., t=...s,  \[sigmoid=**t**/f/sls\])
 + center_view (selection='...')
-+ show_figure (t=...s)
++ show_figure (t=...s, figure_index=**0**)
 + do_nothing (t=...s)
 
 (Values in bold font indicate defaults when parameters are optional)
@@ -60,8 +60,9 @@ Sample movie scripts are available in the `examples` directory.
 ### List of available global keywords and parameters:
 
 + global (\[fps=20, draft=t/**f**, keepframes=t/**f**, name=**movie**\])
-+ layout (not implemented yet)
-+ scene_identifier (visualization=..., \[position=**1,1**, resolution=**1000,1000**\])
++ layout (\[rows=**1**, columns=**1**\])
++ figure (\[files=figure1.png,figure2.png,...\])
++ scene_identifier (visualization=..., \[position=**0,0**, resolution=**1000,1000**\])
 
 (instead of scene_identifier, you should put the actual identifier
 of the scene in question, e.g. `scene_1` in the example below)
@@ -76,8 +77,20 @@ the `=` sign)
 + Multiple actions (e.g. rotation and zoom_in) can be performed
 simultaneously if they are encircled in curly brackets and separated
 with semicolons, e.g. `{rotate t=1s angle=50; zoom_in t=1s scale=2}`;
-they can also be split over several lines for clarity
+they can also be split over several lines for clarity (here the second
+`t=1s` parameter specification will supersede the first, so that time
+might as well only be specified once)
 + A line starting with a `$` sign specifies global keywords, e.g.
 `$ global fps=20`
 + true/false values can be specified as `true/false`, `yes/no` or in
 shorthand notation (`t/f`, `y/n`)
+
+### Notes on extra graphics features
+
++ External figures (e.g. ending credits) can be featured in the movies.
+The external graphics file has to be listed in the global `figure`
+directive, and its index in the list has to be specified as a parameter
+in `show_figure`. In this way, multiple graphics files can be accessed
+independently by each `scene` object.
++ Insets and overlays will be added soon
++ Dynamic figure generation through matplotlib will be added soon
