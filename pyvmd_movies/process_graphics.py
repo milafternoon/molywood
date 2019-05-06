@@ -62,8 +62,8 @@ def gen_fig(action):
     if action.action_type == 'show_figure':
         fig_file = action.scene.script.figures[int(action.parameters['figure_index'])]
         for fr in range(action.initframe, action.initframe + action.framenum):
-            os.system('convert {} {}-{}.png'.format(fig_file, action.scene.name, fr))
-            # TODO let's think about the resolution (sung along to Beatles?)
+            os.system('convert {} -resize {}x{} {}-{}.png'.format(fig_file, *action.scene.resolution,
+                                                                  action.scene.name, fr))
 
 # TODO think of adding insets; need to be done before postprocessor() is run
 

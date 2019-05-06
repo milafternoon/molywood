@@ -35,13 +35,14 @@ class Script:
         """
         # the part below controls TCL/VMD rendering
         for scene in self.scenes:
-            tcl_script = scene.tcl()  # TODO don't run VMD if nothing to do there
-            with open('script_{}.tcl'.format(scene.name), 'w') as out:
-                out.write(tcl_script)
-            os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
-        os.system('for i in $(ls *tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; '
-                  'rm $(echo $i | sed "s/tga/dat/g"); done')
-        # here we do simple picture rendering
+            if scene.run_vmd:
+                tcl_script = scene.tcl()
+                with open('script_{}.tcl'.format(scene.name), 'w') as out:
+                    out.write(tcl_script)
+                os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
+                os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; '
+                          'rm $(echo $i | sed "s/tga/dat/g"); done'.format(scene.name))
+            # here we would do matplotlib figs generation
         # at this stage, each scene should have all its initial frames rendered
         process_graphics.postprocessor(self)
         os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
@@ -182,13 +183,14 @@ class Scene:
     with a valid input file
     """
     def __init__(self, script, name, tcl=None, py=None, resolution=(1000, 1000), position=(1, 1)):
-        self.script = script  # TODO enable user to specify resolution globally in a consistent way
+        self.script = script
         self.name = name
         self.visualization = tcl
         self.actions = []
         self.resolution = resolution
         self.position = position
         self.py_code = py
+        self.run_vmd = False
         self.total_frames = 0
     
     def add_action(self, description):
@@ -243,8 +245,10 @@ class Scene:
             code += 'axes location off\n'
             code += 'render options Tachyon "/usr/local/lib/vmd/tachyon_LINUXAMD64" -aasamples 12 %s -format ' \
                     'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
-            for action in self.actions:
-                code = code + action.generate()
+            action_code = sum([a.generate() for a in self.actions])
+            if action_code:
+                code += action_code
+                self.run_vmd = True
         else:
             code = ''
         return code + '\nexit\n'
