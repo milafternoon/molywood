@@ -69,17 +69,17 @@ of the scene in question, e.g. `scene_1` in the example below)
 
 ### Notes on input formatting:
 
-+ A hash (\#) marks the beginning of a scene, and should contain
-a single-word scene identifier,  e.g. `# scene_1`
++ A hash (\#) marks the *beginning* of a scene input section, and should
+be followed by a single-word scene identifier,  e.g. `# scene_1`
 + Single actions have to be specified on a single line, starting with
-a keyword and followed by `parameter=value` pairs (no spaces encircling
-the `=` sign)
+a keyword and followed by any number of whitespace-separated
+ `parameter=value` pairs (note: no spaces encircling the `=` sign)
 + Multiple actions (e.g. rotation and zoom_in) can be performed
 simultaneously if they are encircled in curly brackets and separated
 with semicolons, e.g. `{rotate t=1s angle=50; zoom_in t=1s scale=2}`;
-they can also be split over several lines for clarity (here the second
-`t=1s` parameter specification will supersede the first, so that time
-might as well only be specified once)
+they can also be split over several lines for clarity. Note that here,
+the second `t=1s` parameter specification will overwrite the first, so
+that time might as well only be specified once
 + A line starting with a `$` sign specifies global keywords, e.g.
 `$ global fps=20`
 + true/false values can be specified as `true/false`, `yes/no` or in
@@ -89,8 +89,14 @@ shorthand notation (`t/f`, `y/n`)
 
 + External figures (e.g. ending credits) can be featured in the movies.
 The external graphics file has to be listed in the global `figure`
-directive, and its index in the list has to be specified as a parameter
-in `show_figure`. In this way, multiple graphics files can be accessed
-independently by each `scene` object.
+directive (e.g. `$ figure files=graph.png`), and its index in the list
+has to be specified as a parameter in `show_figure` action (e.g.
+`show_figure t=4s figure_index=0`). In this way, multiple graphics files
+can be accessed independently by any `scene` object.
++ Note that it is *the user* who is responsible for setting correct
+resolutions for the individual scenes. By default, each scene is
+rendered in a resolution of 1000x1000 (200x200 in the `draft` mode);
+if e.g. a source figure isn't exactly rectangular, it will be scaled to
+fit in the rectangle, but its aspect ratio (shape) will not be affected.
 + Insets and overlays will be added soon
 + Dynamic figure generation through matplotlib will be added soon
