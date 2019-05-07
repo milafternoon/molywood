@@ -64,8 +64,8 @@ def gen_fig(action):
         for fr in range(action.initframe, action.initframe + action.framenum):
             os.system('convert {} -resize {}x{} {}-{}.png'.format(fig_file, *action.scene.resolution,
                                                                   action.scene.name, fr))
-
-# TODO think of adding insets; need to be done before postprocessor() is run
+    if 'add_overlay' in action.action_type:
+        pass  # TODO generate overlays
 
 
 def equalize_frames(script):
@@ -76,3 +76,27 @@ def equalize_frames(script):
         if nf < highest:
             for i in range(nf, highest):
                 os.system('cp {}-{}.png {}-{}.png'.format(names[n], nf-1, names[n], i))
+
+
+def compose_overlay(action):
+    """
+    Scales and composes the overlay provided
+    that the picture ('overlay-frame_name.png')
+    was already produced
+    :param action: Action or SimultaneousAction, object to extract data from
+    :return: None
+    """
+    frames = range(action.initframe, action.initframe + action.framenum)
+    scene = action.scene.name
+    res = action.scene.resolution
+    scaling = float(action.parameters['relative_size'])
+    overlay_res = [scaling*r for r in res]
+    origin_frac = [float(x) for x in action.parameters['origin']]
+    origin_px = [int(r*o) for r, o in zip(res, origin_frac)]
+    new_origin_px = [res[0]-overlay_res[0]-origin_px[0], origin_px[1]]  # imagemagick puts origin on the right side
+    for fr in frames:
+        fig_file = 'overlay-{}-{}.png'.format(scene, fr)  # TODO enable more than one overlay?
+        target_fig = '{}-{}.png'.format(scene, fr)
+        os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, scene, fig_file))
+        os.system('composite -compose atop -geometry -{}-{} {} {} {}'.format(*new_origin_px, fig_file,
+                                                                             target_fig, target_fig))
