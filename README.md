@@ -52,8 +52,9 @@ Sample movie scripts are available in the `examples` directory.
 + zoom_in/zoom_out (scale=..., t=...s, \[sigmoid=**t**/f/sls\])
 + make_transparent/make_opaque (material=..., t=...s,  \[sigmoid=**t**/f/sls\])
 + center_view (selection='...')
-+ show_figure (t=...s, figure_index=**0**)
++ show_figure (t=...s, figure_index=...)
 + do_nothing (t=...s)
++ add_overlay (t=...s, figure_index=..., \[origin=0,0 relative_size=1\])
 
 (Values in bold font indicate defaults when parameters are optional)
 
@@ -69,7 +70,7 @@ of the scene in question, e.g. `scene_1` in the example below)
 
 ### Notes on input formatting:
 
-+ A hash (\#) marks the *beginning* of a scene input section, and should
++ A hash `#` marks the *beginning* of a scene input section, and should
 be followed by a single-word scene identifier,  e.g. `# scene_1`
 + Single actions have to be specified on a single line, starting with
 a keyword and followed by any number of whitespace-separated
@@ -100,3 +101,31 @@ if e.g. a source figure isn't exactly rectangular, it will be scaled to
 fit in the rectangle, but its aspect ratio (shape) will not be affected.
 + Insets and overlays will be added soon
 + Dynamic figure generation through matplotlib will be added soon
+
+#### Notes on individual actions
+
++ `animate` runs the trajectory from `init_frame` to `final_frame`,
+adjusting the playback speed to the time specified with `t`;
+`smooth=X` sets the smoothing of all VMD representations to X
++ `rotate` rotates the scene by `angle` degrees about `axis` in time `t`.
+`sigmoid=t` gives a smooth transition, while `sigmoid=f` gives a
+constant-velocity one; optionally, `sigmoid=sls` performs a smooth-
+linear-smooth transition (preferable for e.g. multiple full rotations)
++ `zoom_in`/`zoom_out` scales the view by a factor of `scale` in time `t`.
+`sigmoid` works like for `rotation`.
++ `make_transparent`/`make_opaque` change the opacity of a selected
+`material` to make it fully transparent or fully opaque in time `t`.
+`sigmoid` works like for `rotation`.
++ `center_view` is an instantaneous action that sets the geometric
+center of `selection` (VMD-compatible) as the new camera center to
+which zoom will converge; useful when zooming onto e.g. a reaction center
++ `show_figure` just shows an image instead of a VMD render during time
+`t`; the image is specified using `figure_index` in conjunction with
+ the globally defined list of figure paths, `$ figure files=...`
+ + `do_nothing` renders the VMD scene for time `t` without doing
+ anything else
+ + `add_overlay` allows to add an inset to the scene, with the figure
+ specified through `figure_index`, position through `origin` (0,0
+ corresponds to the bottom left corner, as in a Cartesian coordinate
+ system), and size through `relative_size` (1 means fit into the whole
+ scene, 0.1 means fit into a rectangle 10% of the scene size)
