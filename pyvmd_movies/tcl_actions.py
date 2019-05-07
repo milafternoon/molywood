@@ -41,7 +41,7 @@ def sigmoid_norm_prod(cumprod, n_points, abruptness=1):
     return increments**exponent
 
 
-def sigmoid_norm_sum_linear_mid(cumsum, n_points, abruptness=1, fraction_linear=0.8):
+def sigmoid_norm_sum_linear_mid(cumsum, n_points, abruptness=1, fraction_linear=0.6):
     """
     Yields n_points increments that sum to cumsum
     by first starting with smooth sigmoid increments,

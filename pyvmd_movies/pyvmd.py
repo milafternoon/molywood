@@ -119,7 +119,7 @@ class Script:
         :return: list of Scene objects
         """
         objects = []
-        pos, res, tcl, py = [1, 1], [1000, 1000], None, None
+        pos, res, tcl, py, struct, traj = [1, 1], [1000, 1000], None, None, None, None
         for sub in scenes.keys():
             if scenes[sub]:
                 if sub in self.directives.keys():
@@ -139,9 +139,17 @@ class Script:
                         py = self.directives[sub]['python']
                     except KeyError:
                         pass
-                if not (py or tcl):
+                    try:
+                        struct = self.directives[sub]['structure']
+                    except KeyError:
+                        pass
+                    try:
+                        traj = self.directives[sub]['trajectory']
+                    except KeyError:
+                        pass
+                if not (py or tcl or struct):
                     raise ValueError("Scene {} does not specify any graphical content".format(scenes[sub].name))
-                objects.append(Scene(self, sub, tcl, py, res, pos))
+                objects.append(Scene(self, sub, tcl, py, res, pos, struct, traj))
                 for action in scenes[sub]:
                     objects[-1].add_action(action)
         return objects
@@ -182,7 +190,8 @@ class Scene:
     molecular system, and hence has to be initialized
     with a valid input file
     """
-    def __init__(self, script, name, tcl=None, py=None, resolution=(1000, 1000), position=(1, 1)):
+    def __init__(self, script, name, tcl=None, py=None, resolution=(1000, 1000), position=(1, 1),
+                 structure=None, trajectory=None):
         self.script = script
         self.name = name
         self.visualization = tcl
@@ -190,6 +199,8 @@ class Scene:
         self.resolution = resolution
         self.position = position
         self.py_code = py
+        self.structure = structure
+        self.trajectory = trajectory
         self.run_vmd = False
         self.total_frames = 0
     
@@ -239,9 +250,19 @@ class Scene:
         action.tcl() functions
         :return: str, TCL code
         """
-        if self.visualization:
-            code = open(self.visualization, 'r').readlines()
-            code = ''.join(code)
+        if self.visualization or self.structure:
+            self.run_vmd = True
+            if self.visualization:
+                code = open(self.visualization, 'r').readlines()
+                code = ''.join(code)
+            else:
+                code = 'mol new {} type {} first 0 last -1 step 1 filebonds 1 ' \
+                       'autobonds 1 waitfor all\n'.format(self.structure, self.structure.split('.')[-1])
+                if self.trajectory:
+                    code += 'mol addfile {} type {} first 0 last -1 step 1 filebonds 1 ' \
+                            'autobonds 1 waitfor all\n'.format(self.trajectory, self.trajectory.split('.')[-1])
+                code += 'mol delrep 0 top\nmol representation NewCartoon 0.300000 10.000000 4.100000 0\n' \
+                        'mol color Structure\nmol selection {all}\nmol material Opaque\nmol addrep top\n'
             code += 'axes location off\n'
             code += 'render options Tachyon "/usr/local/lib/vmd/tachyon_LINUXAMD64" -aasamples 12 %s -format ' \
                     'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
@@ -250,7 +271,6 @@ class Scene:
                 action_code += ac.generate()
             if action_code:
                 code += action_code
-                self.run_vmd = True
         else:
             code = ''
         return code + '\nexit\n'

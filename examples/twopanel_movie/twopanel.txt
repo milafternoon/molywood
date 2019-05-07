@@ -1,14 +1,14 @@
-$ global          fps=10  draft=true  keepframes=true
+$ global          fps=10  draft=false  keepframes=true
 $ layout          rows=1  columns=2
 $ figure          files=logo_big.png
-$ scene_1         visualization=vis.vmd  position=0,0
-$ scene_2         position=0,1
+$ scene_1         visualization=vis.vmd  position=0,0 resolution=500,500
+$ scene_2         position=0,1 resolution=500,500
 
 
 # scene_1
 
 zoom_in           t=2s scale=1.5
-rotate            t=4s angle=360 axis=z
+rotate            t=4s angle=360 axis=z sigmoid='sls'
 center_view       selection='resid 155 159'
 {
  zoom_in          scale=2;
