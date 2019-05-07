@@ -302,14 +302,12 @@ class Action:
         """
         actions_requiring_tcl = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
                                  'make_opaque', 'center_view']
-        actions_requiring_genfig = ['show_figure']
+        actions_requiring_genfig = ['show_figure', 'add_overlay']
+        if set(self.action_type).intersection(set(actions_requiring_genfig)):
+            process_graphics.gen_fig(self)
         if set(self.action_type).intersection(set(actions_requiring_tcl)):
             return tcl_actions.gen_loop(self)
-        elif set(self.action_type).intersection(set(actions_requiring_genfig)):
-            process_graphics.gen_fig(self)
-            return ''
         else:
-            print(self.action_type)
             return ''
     
     def parse(self, command):

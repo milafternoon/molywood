@@ -6,12 +6,12 @@ def postprocessor(script):
         layout_dirs = script.directives['layout']  # layout controls composition of panels
     except KeyError:
         layout_dirs = None
-    try:
-        inset_dirs = script.directives['inset']  # inset controls adding overlays on individual panels
-    except KeyError:
-        inset_dirs = None
+    for scene in script.scenes:
+        for action in scene.actions:
+            if 'add_overlay' in action.action_type:
+                compose_overlay(action)
         
-    if len(script.scenes) == 1 and not layout_dirs:  # simplest case: one scene, no add-ons
+    if len(script.scenes) == 1:  # simplest case: one scene
         scene = script.scenes[0].name
         for fr in range(script.scenes[0].total_frames):
             os.system('mv {}-{}.png {}-{}.png'.format(scene, fr, script.name, fr))
@@ -65,8 +65,16 @@ def gen_fig(action):
             os.system('convert {} -resize {}x{} {}-{}.png'.format(fig_file, *action.scene.resolution,
                                                                   action.scene.name, fr))
     if 'add_overlay' in action.action_type:
-        pass  # TODO generate overlays
-
+        if 'figure_index' in list(action.parameters.keys()):
+            fig_file = action.scene.script.figures[int(action.parameters['figure_index'])]
+            frames = range(action.initframe, action.initframe + action.framenum)
+            scene = action.scene.name
+            res = action.scene.resolution
+            scaling = float(action.parameters['relative_size'])
+            overlay_res = [scaling * r for r in res]
+            for fr in frames:
+                os.system('convert {} -resize {}x{} overlay-{}-{}.png'.format(fig_file, *overlay_res, scene, fr))
+                
 
 def equalize_frames(script):
     nframes = [sc.total_frames for sc in script.scenes]
@@ -89,14 +97,11 @@ def compose_overlay(action):
     frames = range(action.initframe, action.initframe + action.framenum)
     scene = action.scene.name
     res = action.scene.resolution
-    scaling = float(action.parameters['relative_size'])
-    overlay_res = [scaling*r for r in res]
-    origin_frac = [float(x) for x in action.parameters['origin']]
+    origin_frac = [float(x) for x in action.parameters['origin'].split(',')]
     origin_px = [int(r*o) for r, o in zip(res, origin_frac)]
-    new_origin_px = [res[0]-overlay_res[0]-origin_px[0], origin_px[1]]  # imagemagick puts origin on the right side
     for fr in frames:
+        print('composing frame {}'.format(fr))
         fig_file = 'overlay-{}-{}.png'.format(scene, fr)  # TODO enable more than one overlay?
         target_fig = '{}-{}.png'.format(scene, fr)
-        os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, scene, fig_file))
-        os.system('composite -compose atop -geometry -{}-{} {} {} {}'.format(*new_origin_px, fig_file,
-                                                                             target_fig, target_fig))
+        os.system('composite -gravity SouthWest -compose atop -geometry +{}+{} {} {} {}'.format(*origin_px, fig_file,
+                                                                                                target_fig, target_fig))
