@@ -1,4 +1,4 @@
-$ global          fps=10  draft=true  keepframes=false
+$ global          fps=10  draft=true  keepframes=true
 $ layout          rows=1  columns=2
 $ figure          files=logo_big.png
 $ scene_1         visualization=vis.vmd  position=0,0
@@ -7,23 +7,20 @@ $ scene_2         position=0,1
 
 # scene_1
 
-do_nothing        t=2s
-zoom_in           t=2s scale=2
-make_transparent  t=2s material=BrushedMetal
+zoom_in           t=2s scale=1.5
 rotate            t=4s angle=360 axis=z
-center_view       selection='resid 15'
+center_view       selection='resid 155 159'
 {
  zoom_in          scale=2;
- rotate           t=2s angle=90 axis=y
-}
-{
- zoom_out         scale=2;
  rotate           t=2s angle=-90 axis=y
 }
-make_opaque       t=2s material=BrushedMetal
 animate           t=5s frames=0:80 smooth=3
+{
+ zoom_out         scale=2;
+ rotate           t=2s angle=90 axis=y
+}
 
 
 # scene_2
 
-show_figure       t=21s figure_index=0
+show_figure       t=19s figure_index=0

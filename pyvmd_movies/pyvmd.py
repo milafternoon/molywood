@@ -35,8 +35,8 @@ class Script:
         """
         # the part below controls TCL/VMD rendering
         for scene in self.scenes:
+            tcl_script = scene.tcl()
             if scene.run_vmd:
-                tcl_script = scene.tcl()
                 with open('script_{}.tcl'.format(scene.name), 'w') as out:
                     out.write(tcl_script)
                 os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
@@ -245,7 +245,9 @@ class Scene:
             code += 'axes location off\n'
             code += 'render options Tachyon "/usr/local/lib/vmd/tachyon_LINUXAMD64" -aasamples 12 %s -format ' \
                     'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
-            action_code = sum([a.generate() for a in self.actions])
+            action_code = ''
+            for ac in self.actions:
+                action_code += ac.generate()
             if action_code:
                 code += action_code
                 self.run_vmd = True
@@ -278,11 +280,16 @@ class Action:
         produce the action in question
         :return: str, TCL code
         """
-        if self.action_type in ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
-                                'make_opaque', 'center_view']:
+        actions_requiring_tcl = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
+                                 'make_opaque', 'center_view']
+        actions_requiring_genfig = ['show_figure']
+        if set(self.action_type).intersection(set(actions_requiring_tcl)):
             return tcl_actions.gen_loop(self)
-        elif self.action_type in ['show_figure']:
+        elif set(self.action_type).intersection(set(actions_requiring_genfig)):
             process_graphics.gen_fig(self)
+            return ''
+        else:
+            print(self.action_type)
             return ''
     
     def parse(self, command):
@@ -293,7 +300,7 @@ class Action:
         :return: None
         """
         spl = self.split_input_line(command)
-        self.action_type = spl[0]
+        self.action_type = [spl[0]]
         self.parameters.update({prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]})
         if 't' in self.parameters.keys():
             self.parameters['t'] = self.parameters['t'].rstrip('s')
@@ -321,7 +328,6 @@ class Action:
                 if word:
                     words.append(word)
                 previous = current
-        print(line, words)
         return words
         
 

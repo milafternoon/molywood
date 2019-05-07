@@ -59,7 +59,7 @@ def gen_fig(action):
     :param action: Action, object to extract info from
     :return: None
     """
-    if action.action_type == 'show_figure':
+    if 'show_figure' in action.action_type:
         fig_file = action.scene.script.figures[int(action.parameters['figure_index'])]
         for fr in range(action.initframe, action.initframe + action.framenum):
             os.system('convert {} -resize {}x{} {}-{}.png'.format(fig_file, *action.scene.resolution,
