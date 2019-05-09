@@ -9,6 +9,9 @@ TCL UserAni library, and add extended functionalities such as
 animating trajectory data with matplotlib, adding insets or
 making multi-panel movies.
 
+The basic idea behind the functionalities of `pyvmd`, as well as the
+general structure of the code, are illustrated in `script_structure.svg`.
+
 ### Requirements
 
 The internal workflow is as follows: generate the TCL script > run VMD
@@ -21,7 +24,7 @@ locally.
 
 Note:
 + It is recommended to use `python3` from the Anaconda distribution
-as it contains `numpy` as a pre-installed package.
+as it contains `numpy` and `matplotlib` as a pre-installed package.
 + `VMD` can be obtained at `https://www.ks.uiuc.edu/Research/vmd/`.
 + `imagemagick` is installed by default on most Linux distributions;
 run e.g. `convert` to make sure it is available on your machine.
@@ -54,7 +57,7 @@ Sample movie scripts are available in the `examples` directory.
 + center_view (selection='...')
 + show_figure (t=...s, figure_index=...)
 + do_nothing (t=...s)
-+ add_overlay (t=...s, figure_index=..., \[origin=0,0 relative_size=1\])
++ add_overlay (t=...s, \[figure_index=..., datafile=..., origin=0,0 relative_size=1\])
 
 (Values in bold font indicate defaults when parameters are optional)
 
@@ -125,8 +128,15 @@ which zoom will converge; useful when zooming onto e.g. a reaction center
  the globally defined list of figure paths, `$ figure files=...`
  + `do_nothing` renders the VMD scene for time `t` without doing
  anything else
- + `add_overlay` allows to add an inset to the scene, with the figure
- specified through `figure_index`, position through `origin` (0,0
- corresponds to the bottom left corner, as in a Cartesian coordinate
- system), and size through `relative_size` (1 means fit into the whole
- scene, 0.1 means fit into a rectangle 10% of the scene size)
+ + `add_overlay` allows to add an inset to the scene, with the position
+ specified through `origin` (0,0  corresponds to the bottom left corner,
+ as in a regular Cartesian coordinate system), and size through
+ `relative_size` (1 means fit into the whole  scene, 0.1 means fit into
+ a rectangle 10% of the scene size). The content of the overlay can be
+ an external figure (specified through `figure_index`), or an on-the-fly
+ generated matplotlib line plot (based on a data file speficied with
+ the `datafile` parameter). If `frames` are simultaneously specified
+ e.g. in `animate`, a dot will follow the values on the plot. If the
+ data file starts with a single line formatted as
+ `# x axis label; y axis label`, `x axis label` and `y axis label` will
+ be used to label the corresponding axes of the plot.

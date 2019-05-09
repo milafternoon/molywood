@@ -2,6 +2,17 @@ import os
 
 
 def postprocessor(script):
+    """
+    This is the key function that controls composition
+    of the previously rendered scenes. It first applies
+    overlays if requested, and then copies/moves/composes
+    individual frames so that an initial set of
+    scene1...png, sceneX...png files is converted
+    into movie_name...png files that can then
+    be merged into a file using ffmpeg.
+    :param script: Script instance, the master object controlling the movie layout
+    :return: None
+    """
     try:
         layout_dirs = script.directives['layout']  # layout controls composition of panels
     except KeyError:
@@ -53,9 +64,11 @@ def postprocessor(script):
 
 def gen_fig(action):
     """
-    If the action is just to show a figure
-    (e.g. ending credits), then we copy the
-    source file with a proper name
+    Responsible for frame-by-frame generation of files
+    associated with (a) external images and (b)
+    on-the-fly generated matplotlib plots
+    (essentially any graphics that is not rendered
+    by TCL/VMD)
     :param action: Action, object to extract info from
     :return: None
     """
@@ -67,6 +80,9 @@ def gen_fig(action):
                                                                       action.scene.name, fr))
         elif 'datafile' in list(action.parameters.keys()):
             data_simple_plot(action)
+            for fr in range(action.initframe, action.initframe + action.framenum):
+                fig_file = '{}-{}.png'.format(action.scene.name, fr)
+                os.system('convert {} -resize {}x{} {}'.format(fig_file, *action.scene.resolution, fig_file))
             
     if 'add_overlay' in action.action_type:
         frames = range(action.initframe, action.initframe + action.framenum)
@@ -86,6 +102,13 @@ def gen_fig(action):
                 
 
 def equalize_frames(script):
+    """
+    If individual scenes have different frame counts,
+    this function appends the corresponding last figure
+    to the shorter scenes
+    :param script: Script instance, the master object controlling the movie layout
+    :return: None
+    """
     nframes = [sc.total_frames for sc in script.scenes]
     names = [sc.name for sc in script.scenes]
     highest = max(nframes)
@@ -97,9 +120,9 @@ def equalize_frames(script):
 
 def compose_overlay(action):
     """
-    Scales and composes the overlay provided
-    that the picture ('overlay-frame_name.png')
-    was already produced
+    Introduces the overlay provided that the picture
+    ('overlay-frame_name.png') was already produced
+    and properly scaled by gen_fig
     :param action: Action or SimultaneousAction, object to extract data from
     :return: None
     """
@@ -117,6 +140,14 @@ def compose_overlay(action):
 
 
 def data_simple_plot(action):
+    """
+    Creates a set of simple 1D line plots
+    based on a provided data file
+    to e.g. accompany the display of an
+    animated trajectory
+    :param action: Action or SimultaneousAction, object to extract data from
+    :return: None
+    """
     import matplotlib.pyplot as plt
     import numpy as np
     datafile = action.parameters['datafile']
@@ -132,12 +163,18 @@ def data_simple_plot(action):
         labels = labels.strip('#').strip().split(';')
     xmin, xmax = np.min(data[:, 0]), np.max(data[:, 0])
     ymin, ymax = np.min(data[:, 1]), np.max(data[:, 1])
-    animation_frames = [int(x) for x in action.parameters['frames'].split(':')]
-    arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
+    try:
+        animation_frames = [int(x) for x in action.parameters['frames'].split(':')]
+    except KeyError:
+        draw_point = False
+    else:
+        draw_point = True
+        arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
     for fr in range(action.initframe, action.initframe + action.framenum):
         count = fr - action.initframe
         plt.plot(data[:, 0], data[:, 1], lw=3, zorder=0)
-        plt.scatter(data[arr[count], 0], data[arr[count], 1], c='r', s=250, zorder=1)
+        if draw_point:
+            plt.scatter(data[arr[count], 0], data[arr[count], 1], c='r', s=250, zorder=1)
         plt.xlabel(labels[0])
         plt.ylabel(labels[1])
         plt.xlim(1.1*xmin, 1.1*xmax)
