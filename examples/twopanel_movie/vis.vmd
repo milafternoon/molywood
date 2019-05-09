@@ -333,8 +333,8 @@ display aodirect 0.300000
 display dof off
 display dof_fnumber 64.000000
 display dof_focaldist 0.700000
-mol new tubulin.pdb type pdb first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
-mol addfile tubulin_a.xtc type xtc first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol new ../tubulin.pdb type pdb first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol addfile ../tubulin_a.xtc type xtc first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
 mol delrep 0 top
 mol representation NewCartoon 0.300000 10.000000 4.100000 0
 mol color Structure

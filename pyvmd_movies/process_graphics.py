@@ -69,17 +69,20 @@ def gen_fig(action):
             data_simple_plot(action)
             
     if 'add_overlay' in action.action_type:
+        frames = range(action.initframe, action.initframe + action.framenum)
+        scene = action.scene.name
+        res = action.scene.resolution
+        scaling = float(action.parameters['relative_size'])
+        overlay_res = [scaling * r for r in res]
         if 'figure_index' in list(action.parameters.keys()):
             fig_file = action.scene.script.figures[int(action.parameters['figure_index'])]
-            frames = range(action.initframe, action.initframe + action.framenum)
-            scene = action.scene.name
-            res = action.scene.resolution
-            scaling = float(action.parameters['relative_size'])
-            overlay_res = [scaling * r for r in res]
             for fr in frames:
                 os.system('convert {} -resize {}x{} overlay-{}-{}.png'.format(fig_file, *overlay_res, scene, fr))
         elif 'datafile' in list(action.parameters.keys()):
             data_simple_plot(action)
+            for fr in frames:
+                fig_file = 'overlay-{}-{}.png'.format(scene, fr)
+                os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, fig_file))
                 
 
 def equalize_frames(script):
@@ -126,19 +129,20 @@ def data_simple_plot(action):
     except IndexError:
         labels = ['Time', 'Value']
     else:
-        labels = labels.strip('#').strip().split()
+        labels = labels.strip('#').strip().split(';')
     xmin, xmax = np.min(data[:, 0]), np.max(data[:, 0])
     ymin, ymax = np.min(data[:, 1]), np.max(data[:, 1])
-    assert action.framenum >= len(data)
-    count = 0
+    animation_frames = [int(x) for x in action.parameters['frames'].split(':')]
+    arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
     for fr in range(action.initframe, action.initframe + action.framenum):
+        count = fr - action.initframe
         plt.plot(data[:, 0], data[:, 1], lw=3, zorder=0)
-        plt.scatter(data[count, 0], data[count, 1], c='r', s=250, zorder=1)
+        plt.scatter(data[arr[count], 0], data[arr[count], 1], c='r', s=250, zorder=1)
         plt.xlabel(labels[0])
         plt.ylabel(labels[1])
         plt.xlim(1.1*xmin, 1.1*xmax)
         plt.ylim(1.1*ymin, 1.1*ymax)
-        plt.subplots_adjust(left=0.13, right=0.97, top=0.97, bottom=0.13)
+        plt.subplots_adjust(left=0.18, right=0.97, top=0.97, bottom=0.18)
         if 'show_figure' in action.action_type:
             plt.savefig('{}-{}.png'.format(action.scene.name, fr))
         elif 'add_overlay' in action.action_type:

@@ -1,0 +1,15 @@
+$ global          fps=10  draft=false  keepframes=true
+$ layout          rows=1  columns=1
+$ scene_1         visualization=vis.vmd  position=0,0 resolution=500,500
+
+
+# scene_1
+
+zoom_in            t=2s scale=1.5
+center_view        selection='resid 155 159'
+
+{ zoom_in          scale=2;
+  rotate           t=2s angle=-90 axis=y }
+
+{ animate          t=5s frames=0:80 smooth=3;
+  add_overlay      datafile=rmsd.dat origin=0,0.6 relative_size=0.4 }
