@@ -147,6 +147,7 @@ def gen_setup(action):
         except KeyError:
             pass
         else:
+            check_if_convertible(smooth, int, 'smooth')
             setups['ani'] = 'set mtop [molinfo top]\nset nrep [molinfo $mtop get numreps]\n' \
                             'for {{set i 0}} {{$i < $nrep}} {{incr i}} {{\n' \
                             'mol smoothrep $mtop $i {}\n}}\n'.format(smooth)
@@ -174,25 +175,33 @@ def gen_iterators(action):
         abruptness = float(action.parameters['abruptness'])
     except KeyError:
         abruptness = 1
+    else:
+        check_if_convertible(abruptness, float, 'abruptness')
     if 'rotate' in action.action_type:
+        angle = action.parameters['angle']
+        check_if_convertible(angle, float, 'smooth')
         if sigmoid:
-            arr = sigmoid_norm_sum(float(action.parameters['angle']), action.framenum, abruptness)
+            arr = sigmoid_norm_sum(float(angle), action.framenum, abruptness)
         elif sls:
-            arr = sigmoid_norm_sum_linear_mid(float(action.parameters['angle']), action.framenum, abruptness)
+            arr = sigmoid_norm_sum_linear_mid(float(angle), action.framenum, abruptness)
         else:
-            arr = np.ones(action.framenum) * float(action.parameters['angle'])/action.framenum
+            arr = np.ones(action.framenum) * float(angle)/action.framenum
         iterators['rot'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'zoom_in' in action.action_type:
+        scale = action.parameters['scale']
+        check_if_convertible(scale, float, 'scale')
         if sigmoid:
-            arr = sigmoid_norm_prod(float(action.parameters['scale']), action.framenum, abruptness)
+            arr = sigmoid_norm_prod(float(scale), action.framenum, abruptness)
         else:
-            arr = np.ones(action.framenum) * float(action.parameters['scale'])**(1/action.framenum)
+            arr = np.ones(action.framenum) * float(scale)**(1/action.framenum)
         iterators['zin'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'zoom_out' in action.action_type:
+        scale = action.parameters['scale']
+        check_if_convertible(scale, float, 'scale')
         if sigmoid:
-            arr = sigmoid_norm_prod(1/float(action.parameters['scale']), action.framenum, abruptness)
+            arr = sigmoid_norm_prod(1/float(scale), action.framenum, abruptness)
         else:
-            arr = np.ones(action.framenum) * 1/(float(action.parameters['scale'])**(1/action.framenum))
+            arr = np.ones(action.framenum) * 1/(float(scale)**(1/action.framenum))
         iterators['zou'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'make_transparent' in action.action_type:
         if sigmoid:
@@ -207,8 +216,10 @@ def gen_iterators(action):
             arr = np.linspace(0, 1, action.framenum)
         iterators['mop'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'animate' in action.action_type:
-        animation_frames = [int(x) for x in action.parameters['frames'].split(':')]
-        arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
+        animation_frames = [x for x in action.parameters['frames'].split(':')]
+        for val in animation_frames:
+            check_if_convertible(val, int, 'frames')
+        arr = np.linspace(int(animation_frames[0]), int(animation_frames[1]), action.framenum).astype(int)
         iterators['ani'] = ' '.join([str(int(el)) for el in arr])
     return iterators
     
@@ -225,7 +236,9 @@ def gen_command(action):
     commands = {}
     if 'rotate' in action.action_type:
         axis = action.parameters['axis']
-        commands['rot'] = "set t [lindex $rot $i]\n  rotate {} by $t\n".format(axis)
+        if axis.lower() not in 'xyz':
+            raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given".format(axis))
+        commands['rot'] = "set t [lindex $rot $i]\n  rotate {} by $t\n".format(axis.lower())
     if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
         material = action.parameters['material']
         keyw = 'mtr' if 'make_transparent' in action.action_type else 'mop'
@@ -237,3 +250,10 @@ def gen_command(action):
     if 'animate' in action.action_type:
         commands['ani'] = "set t [lindex $ani $i]\n  animate goto $t\n"
     return commands
+
+
+def check_if_convertible(string, object_type, param_name):
+    try:
+        _ = object_type(string)
+    except ValueError:
+        raise RuntimeError("'{}' must be {}, {} was given instead".format(param_name, object_type, string))

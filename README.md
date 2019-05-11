@@ -55,7 +55,7 @@ Sample movie scripts are available in the `examples` directory.
 + zoom_in/zoom_out (scale=..., t=...s, \[sigmoid=**t**/f/sls\])
 + make_transparent/make_opaque (material=..., t=...s,  \[sigmoid=**t**/f/sls\])
 + center_view (selection='...')
-+ show_figure (t=...s, figure_index=...)
++ show_figure (t=...s, \[figure_index=..., datafile=...\])
 + do_nothing (t=...s)
 + add_overlay (t=...s, \[figure_index=..., datafile=..., origin=0,0 relative_size=1\])
 

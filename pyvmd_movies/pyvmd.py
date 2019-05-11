@@ -15,6 +15,11 @@ class Script:
     and render the movie (possibly with multiple
     panels, overlays etc.)
     """
+    allowed_globals = ['global', 'layout', 'figure']
+    allowed_params = {'global': {'fps', 'keepframes', 'draft', 'name'},
+                      'layout': {'columns', 'rows'},
+                      'figure': {'files'}}
+    
     def __init__(self, scriptfile=None):
         self.name = 'movie'
         self.scenes = []
@@ -104,9 +109,16 @@ class Script:
         dirs = {}
         for directive in directives:
             entries = directive.split()
+            if entries[0] not in Script.allowed_globals:
+                raise RuntimeError("'{}' is not an allowed global directive. Allowed "
+                                   "global directives are: {}".format(entries[0], ", ".join(Script.allowed_globals)))
             dirs[entries[0]] = {}
             for entry in entries[1:]:
                 key, value = entry.split('=')
+                if key not in Script.allowed_params[entries[0]]:
+                    raise RuntimeError("'{}' is not a parameter compatible with the directive {}. Allowed parameters "
+                                       "include: {}".format(key, entries[0],
+                                                            ", ".join(list(Script.allowed_params[entries[0]]))))
                 dirs[entries[0]][key] = value
         return dirs
     
@@ -282,6 +294,21 @@ class Action:
     a movie, e.g. a rotation, change of material
     or zoom-in
     """
+    allowed_actions = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
+                       'make_opaque', 'center_view', 'show_figure', 'add_overlay']
+    
+    allowed_params = {'do_nothing': {'t'},
+                      'animate': {'frames', 'smooth', 't', 'sigmoid'},
+                      'rotate': {'angle', 'axis', 't', 'sigmoid'},
+                      'zoom_in': {'scale', 't', 'sigmoid'},
+                      'zoom_out': {'scale', 't', 'sigmoid'},
+                      'make_transparent': {'material', 't', 'sigmoid'},
+                      'make_opaque': {'material', 't', 'sigmoid'},
+                      'center_view': {'selection'},
+                      'show_figure': {'figure_index', 't'},
+                      'add_overlay': {'figure_index', 't', 'origin', 'relative_size'},
+                      }
+    
     def __init__(self, scene, description):
         self.scene = scene
         self.description = description
@@ -318,8 +345,16 @@ class Action:
         :return: None
         """
         spl = self.split_input_line(command)
+        if spl[0] not in Action.allowed_actions:
+            raise RuntimeError("'{}' is not a valid action. Allowed actions "
+                               "are: {}".format(spl[0], ', '.join(list(Action.allowed_actions))))
         self.action_type = [spl[0]]
         self.parameters.update({prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]})
+        for par in self.parameters.keys():
+            if par not in Action.allowed_params[spl[0]]:
+                raise RuntimeError("'{}' is not a valid parameter for action '{}'. Parameters compatible with this "
+                                   "action include: {}".format(par, spl[0],
+                                                               ', '.join(list(Action.allowed_params[spl[0]]))))
         if 't' in self.parameters.keys():
             self.parameters['t'] = self.parameters['t'].rstrip('s')
 
@@ -370,13 +405,23 @@ class SimultaneousAction(Action):
         :param command: str, description of the actions
         :return: None
         """
+        # TODO mod when add_overlay is doubled?
         actions = [comm.strip() for comm in command.split(';')]
         for action in actions:
             super().parse(action)
         self.action_type = [action.split()[0] for action in actions]
+        if ('zoom_in' in self.action_type and 'zoom_out' in self.action_type) \
+                or ('make_opaque' in self.action_type and 'make_transparent' in self.action_type):
+            raise RuntimeError("actions {} are mutually exclusive".format(", ".join(self.action_type)))
 
 
 if __name__ == "__main__":
-    scr = Script(sys.argv[1])
-    # print(scr.scenes[0].tcl())
-    scr.render()
+    try:
+        scr = Script(sys.argv[1])
+    except IndexError:
+        print("To run PyVMD, provide the name of the text input file, e.g. "
+              "'python pyvmd.py script.txt'. To see and try out example "
+              "input files, go to the 'examples' directory.")
+        sys.exit(1)
+    else:
+        scr.render()
