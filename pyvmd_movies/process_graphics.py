@@ -33,7 +33,7 @@ def postprocessor(script):
             equalize_frames(script)
         nrows = int(layout_dirs['rows'])
         ncols = int(layout_dirs['columns'])
-        labels_matrix = [[] for r in range(nrows)]
+        labels_matrix = [[] for _ in range(nrows)]
         all_scenes = [sc.name for sc in script.scenes]
         positions = {}
         for scene in all_scenes:
@@ -79,26 +79,29 @@ def gen_fig(action):
                 os.system('convert {} -resize {}x{} {}-{}.png'.format(fig_file, *action.scene.resolution,
                                                                       action.scene.name, fr))
         elif 'datafile' in list(action.parameters.keys()):
-            data_simple_plot(action)
+            df = action.parameters['datafile']
+            data_simple_plot(action, df, 'spl')
             for fr in range(action.initframe, action.initframe + action.framenum):
                 fig_file = '{}-{}.png'.format(action.scene.name, fr)
-                os.system('convert {} -resize {}x{} {}'.format(fig_file, *action.scene.resolution, fig_file))
+                os.system('convert spl-{} -resize {}x{} {}'.format(fig_file, *action.scene.resolution, fig_file))
             
     if 'add_overlay' in action.action_type:
         frames = range(action.initframe, action.initframe + action.framenum)
         scene = action.scene.name
         res = action.scene.resolution
-        scaling = float(action.parameters['relative_size'])
-        overlay_res = [scaling * r for r in res]
-        if 'figure_index' in list(action.parameters.keys()):
-            fig_file = action.scene.script.figures[int(action.parameters['figure_index'])]
-            for fr in frames:
-                os.system('convert {} -resize {}x{} overlay-{}-{}.png'.format(fig_file, *overlay_res, scene, fr))
-        elif 'datafile' in list(action.parameters.keys()):
-            data_simple_plot(action)
-            for fr in frames:
-                fig_file = 'overlay-{}-{}.png'.format(scene, fr)
-                os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, fig_file))
+        for ovl in action.overlays.keys():
+            scaling = float(action.overlays[ovl]['relative_size'])
+            overlay_res = [scaling * r for r in res]
+            if 'figure_index' in list(action.overlays[ovl].keys()):
+                fig_file = action.scene.script.figures[int(action.overlays[ovl]['figure_index'])]
+                for fr in frames:
+                    os.system('convert {} -resize {}x{} {}-{}-{}.png'.format(fig_file, *overlay_res, scene, ovl, fr))
+            elif 'datafile' in list(action.overlays[ovl].keys()):
+                df = action.overlays[ovl]['datafile']
+                data_simple_plot(action, df, ovl)
+                for fr in frames:
+                    fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
+                    os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, fig_file))
                 
 
 def equalize_frames(script):
@@ -126,20 +129,24 @@ def compose_overlay(action):
     :param action: Action or SimultaneousAction, object to extract data from
     :return: None
     """
+    assert hasattr(action, 'overlays') and isinstance(action.overlays, dict)
     frames = range(action.initframe, action.initframe + action.framenum)
     scene = action.scene.name
     res = action.scene.resolution
-    origin_frac = [float(x) for x in action.parameters['origin'].split(',')]
-    origin_px = [int(r*o) for r, o in zip(res, origin_frac)]
-    for fr in frames:
-        print('composing frame {}'.format(fr))
-        fig_file = 'overlay-{}-{}.png'.format(scene, fr)  # TODO enable more than one overlay?
-        target_fig = '{}-{}.png'.format(scene, fr)
-        os.system('composite -gravity SouthWest -compose atop -geometry +{}+{} {} {} {}'.format(*origin_px, fig_file,
-                                                                                                target_fig, target_fig))
+    for ovl in action.overlays.keys():
+        origin_frac = [float(x) for x in action.overlays[ovl]['origin'].split(',')]
+        origin_px = [int(r*o) for r, o in zip(res, origin_frac)]
+        for fr in frames:
+            print('composing frame {}'.format(fr))
+            fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
+            target_fig = '{}-{}.png'.format(scene, fr)
+            os.system('composite -gravity SouthWest -compose atop -geometry +{}+{} {} {} {}'.format(*origin_px,
+                                                                                                    fig_file,
+                                                                                                    target_fig,
+                                                                                                    target_fig))
 
 
-def data_simple_plot(action):
+def data_simple_plot(action, datafile, basename):
     """
     Creates a set of simple 1D line plots
     based on a provided data file
@@ -150,10 +157,10 @@ def data_simple_plot(action):
     """
     import matplotlib.pyplot as plt
     import numpy as np
-    datafile = action.parameters['datafile']
     font = {'size': 22}
     plt.rc('font', **font)
     plt.rc('axes', linewidth=2)
+    draw_point = True
     data = np.loadtxt(datafile)
     try:
         labels = [x.strip() for x in open(datafile) if x.strip().startswith('#')][0]
@@ -163,13 +170,16 @@ def data_simple_plot(action):
         labels = labels.strip('#').strip().split(';')
     xmin, xmax = np.min(data[:, 0]), np.max(data[:, 0])
     ymin, ymax = np.min(data[:, 1]), np.max(data[:, 1])
+    # TODO question: should we only allow moving points with 'animate'?
     try:
         animation_frames = [int(x) for x in action.parameters['frames'].split(':')]
-    except KeyError:
-        draw_point = False
-    else:
-        draw_point = True
         arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
+    except KeyError:
+        try:
+            animation_frames = [int(x) for x in action.overlays[basename]['frames'].split(':')]
+            arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
+        except (KeyError, AttributeError):
+            draw_point = False
     for fr in range(action.initframe, action.initframe + action.framenum):
         count = fr - action.initframe
         plt.plot(data[:, 0], data[:, 1], lw=3, zorder=0)
@@ -180,8 +190,5 @@ def data_simple_plot(action):
         plt.xlim(1.1*xmin, 1.1*xmax)
         plt.ylim(1.1*ymin, 1.1*ymax)
         plt.subplots_adjust(left=0.18, right=0.97, top=0.97, bottom=0.18)
-        if 'show_figure' in action.action_type:
-            plt.savefig('{}-{}.png'.format(action.scene.name, fr))
-        elif 'add_overlay' in action.action_type:
-            plt.savefig('overlay-{}-{}.png'.format(action.scene.name, fr))
+        plt.savefig('{}-{}-{}.png'.format(basename, action.scene.name, fr))
         plt.clf()

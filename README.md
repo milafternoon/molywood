@@ -57,9 +57,11 @@ Sample movie scripts are available in the `examples` directory.
 + center_view (selection='...')
 + show_figure (t=...s, \[figure_index=..., datafile=...\])
 + do_nothing (t=...s)
-+ add_overlay (t=...s, \[figure_index=..., datafile=..., origin=0,0 relative_size=1\])
++ add_overlay (t=...s, \[figure_index=..., datafile=..., origin=0,0
+relative_size=1 frames=init_frame:final_frame\])
 
-(Values in bold font indicate defaults when parameters are optional)
+(Square brackets denote optional parameters. Values in bold font
+indicate defaults when parameters are optional)
 
 ### List of available global keywords and parameters:
 
@@ -132,11 +134,16 @@ which zoom will converge; useful when zooming onto e.g. a reaction center
  specified through `origin` (0,0  corresponds to the bottom left corner,
  as in a regular Cartesian coordinate system), and size through
  `relative_size` (1 means fit into the whole  scene, 0.1 means fit into
- a rectangle 10% of the scene size). The content of the overlay can be
- an external figure (specified through `figure_index`), or an on-the-fly
- generated matplotlib line plot (based on a data file speficied with
- the `datafile` parameter). If `frames` are simultaneously specified
- e.g. in `animate`, a dot will follow the values on the plot. If the
- data file starts with a single line formatted as
- `# x axis label; y axis label`, `x axis label` and `y axis label` will
- be used to label the corresponding axes of the plot.
+ a rectangle 10% of the scene size).
+    + The content of the overlay can be  an external figure (specified
+    through `figure_index`), or an on-the-fly  generated matplotlib line
+    plot (based on a data file speficied with the `datafile` parameter).
+    + If `frames` are simultaneously specified  e.g. in `animate` or
+    in `add_overlay` itself, a dot will follow the values on the plot.
+    + If the  data file starts with a single line formatted as
+    `# x axis label; y axis label`, `x axis label` and `y axis label`
+    will be used to label the corresponding axes of the plot.
+    + Mulitple overlays can be added to a scene simultaneously; adding
+    many `add_overlay` commands separated by semicolons and encircled
+    in curly brackets works just as any other multiple action (see
+    `Notes on input formatting` above).

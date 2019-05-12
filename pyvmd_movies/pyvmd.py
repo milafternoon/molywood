@@ -16,9 +16,9 @@ class Script:
     panels, overlays etc.)
     """
     allowed_globals = ['global', 'layout', 'figure']
-    allowed_params = {'global': {'fps', 'keepframes', 'draft', 'name'},
-                      'layout': {'columns', 'rows'},
-                      'figure': {'files'}}
+    allowed_params = {'global': ['fps', 'keepframes', 'draft', 'name'],
+                      'layout': ['columns', 'rows'],
+                      'figure': ['files']}
     
     def __init__(self, scriptfile=None):
         self.name = 'movie'
@@ -93,6 +93,9 @@ class Script:
                     multiline = None
                 else:
                     subscripts[current_sub].append(line)
+        Script.allowed_globals.extend(list(subscripts.keys()))
+        for sc in subscripts.keys():
+            Script.allowed_params[sc] = ['visualization', 'structure', 'trajectory', 'position', 'resolution']
         self.directives = self.parse_directives(master_setup)
         self.scenes = self.parse_scenes(subscripts)
         self.prepare()
@@ -159,8 +162,6 @@ class Script:
                         traj = self.directives[sub]['trajectory']
                     except KeyError:
                         pass
-                if not (py or tcl or struct):
-                    raise ValueError("Scene {} does not specify any graphical content".format(scenes[sub].name))
                 objects.append(Scene(self, sub, tcl, py, res, pos, struct, traj))
                 for action in scenes[sub]:
                     objects[-1].add_action(action)
@@ -285,6 +286,8 @@ class Scene:
                 code += action_code
         else:
             code = ''
+            for ac in self.actions:
+                _ = ac.generate()
         return code + '\nexit\n'
         
         
@@ -306,7 +309,7 @@ class Action:
                       'make_opaque': {'material', 't', 'sigmoid'},
                       'center_view': {'selection'},
                       'show_figure': {'figure_index', 't'},
-                      'add_overlay': {'figure_index', 't', 'origin', 'relative_size'},
+                      'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames'},
                       }
     
     def __init__(self, scene, description):
@@ -331,7 +334,7 @@ class Action:
                                  'make_opaque', 'center_view']
         actions_requiring_genfig = ['show_figure', 'add_overlay']
         if set(self.action_type).intersection(set(actions_requiring_genfig)):
-            process_graphics.gen_fig(self)
+            process_graphics.gen_fig(self)  # TODO maybe move the frame generation part out of here
         if set(self.action_type).intersection(set(actions_requiring_tcl)):
             return tcl_actions.gen_loop(self)
         else:
@@ -344,6 +347,7 @@ class Action:
         :param command: str, description of the action
         :return: None
         """
+        # TODO lookout for overlays (only make sense in SimultaneousAction)
         spl = self.split_input_line(command)
         if spl[0] not in Action.allowed_actions:
             raise RuntimeError("'{}' is not a valid action. Allowed actions "
@@ -362,7 +366,9 @@ class Action:
     def split_input_line(line):
         """
         a modified string splitter that doesn't split
-        words encircled in quotation marks
+        words encircled in quotation marks; required
+        by center_view that requires a VMD-compatible
+        selection string
         :param line: str, line to be split
         :return: list of strings, contains individual words
         """
@@ -391,6 +397,7 @@ class SimultaneousAction(Action):
     and rotation)
     """
     def __init__(self, scene, description):
+        self.overlays = {}  # TODO need special treatment for overlays as there can be many
         super().__init__(scene, description)
         
     def parse(self, command):
@@ -408,11 +415,20 @@ class SimultaneousAction(Action):
         # TODO mod when add_overlay is doubled?
         actions = [comm.strip() for comm in command.split(';')]
         for action in actions:
-            super().parse(action)
+            if action.split()[0] == 'add_overlay':
+                self.parse_overlays(action)
+            else:
+                super().parse(action)
         self.action_type = [action.split()[0] for action in actions]
         if ('zoom_in' in self.action_type and 'zoom_out' in self.action_type) \
                 or ('make_opaque' in self.action_type and 'make_transparent' in self.action_type):
             raise RuntimeError("actions {} are mutually exclusive".format(", ".join(self.action_type)))
+    
+    def parse_overlays(self, directive):
+        overlays_count = len(list(self.overlays.keys()))
+        ind = str(overlays_count + 1)
+        spl = directive.split()
+        self.overlays["overlay" + ind] = {prm.split('=')[0]: prm.split('=')[1] for prm in spl[1:]}
 
 
 if __name__ == "__main__":
@@ -420,7 +436,7 @@ if __name__ == "__main__":
         scr = Script(sys.argv[1])
     except IndexError:
         print("To run PyVMD, provide the name of the text input file, e.g. "
-              "'python pyvmd.py script.txt'. To see and try out example "
+              "'python path/to/pyvmd.py script.txt'. To see and try out example "
               "input files, go to the 'examples' directory.")
         sys.exit(1)
     else:

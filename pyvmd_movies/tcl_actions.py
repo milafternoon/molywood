@@ -237,7 +237,7 @@ def gen_command(action):
     if 'rotate' in action.action_type:
         axis = action.parameters['axis']
         if axis.lower() not in 'xyz':
-            raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given".format(axis))
+            raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given instead".format(axis))
         commands['rot'] = "set t [lindex $rot $i]\n  rotate {} by $t\n".format(axis.lower())
     if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
         material = action.parameters['material']
