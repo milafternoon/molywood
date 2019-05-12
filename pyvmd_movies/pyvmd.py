@@ -334,7 +334,7 @@ class Action:
                                  'make_opaque', 'center_view']
         actions_requiring_genfig = ['show_figure', 'add_overlay']
         if set(self.action_type).intersection(set(actions_requiring_genfig)):
-            process_graphics.gen_fig(self)  # TODO maybe move the frame generation part out of here
+            process_graphics.gen_fig(self)
         if set(self.action_type).intersection(set(actions_requiring_tcl)):
             return tcl_actions.gen_loop(self)
         else:
@@ -347,11 +347,13 @@ class Action:
         :param command: str, description of the action
         :return: None
         """
-        # TODO lookout for overlays (only make sense in SimultaneousAction)
         spl = self.split_input_line(command)
         if spl[0] not in Action.allowed_actions:
             raise RuntimeError("'{}' is not a valid action. Allowed actions "
                                "are: {}".format(spl[0], ', '.join(list(Action.allowed_actions))))
+        if not isinstance(self, SimultaneousAction) and spl[0] == "add_overlay":
+            raise RuntimeError("Overlays can only be added simultaneously with another action, not as"
+                               "a standalone one")
         self.action_type = [spl[0]]
         self.parameters.update({prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]})
         for par in self.parameters.keys():
@@ -397,7 +399,7 @@ class SimultaneousAction(Action):
     and rotation)
     """
     def __init__(self, scene, description):
-        self.overlays = {}  # TODO need special treatment for overlays as there can be many
+        self.overlays = {}  # need special treatment for overlays as there can be many
         super().__init__(scene, description)
         
     def parse(self, command):
@@ -412,7 +414,6 @@ class SimultaneousAction(Action):
         :param command: str, description of the actions
         :return: None
         """
-        # TODO mod when add_overlay is doubled?
         actions = [comm.strip() for comm in command.split(';')]
         for action in actions:
             if action.split()[0] == 'add_overlay':

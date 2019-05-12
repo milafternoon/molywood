@@ -53,7 +53,7 @@ def postprocessor(script):
         for r in range(nrows):
             convert_command += ' \( '
             for c in range(ncols):
-                convert_command += labels_matrix[r][c] + '-{}.png '
+                convert_command += str(labels_matrix[r][c]) + '-{}.png '
             convert_command += ' +append \) '
         convert_command += ' -append '
         for fr in range(script.scenes[0].total_frames):
@@ -153,6 +153,8 @@ def data_simple_plot(action, datafile, basename):
     to e.g. accompany the display of an
     animated trajectory
     :param action: Action or SimultaneousAction, object to extract data from
+    :param datafile: str, file containing the data to be plotted
+    :param basename: str, base name of the image to be produced (e.g. 'overlay1')
     :return: None
     """
     import matplotlib.pyplot as plt
@@ -170,7 +172,6 @@ def data_simple_plot(action, datafile, basename):
         labels = labels.strip('#').strip().split(';')
     xmin, xmax = np.min(data[:, 0]), np.max(data[:, 0])
     ymin, ymax = np.min(data[:, 1]), np.max(data[:, 1])
-    # TODO question: should we only allow moving points with 'animate'?
     try:
         animation_frames = [int(x) for x in action.parameters['frames'].split(':')]
         arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
