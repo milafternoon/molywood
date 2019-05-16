@@ -355,12 +355,13 @@ class Action:
             raise RuntimeError("Overlays can only be added simultaneously with another action, not as"
                                "a standalone one")
         self.action_type = [spl[0]]
-        self.parameters.update({prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]})
-        for par in self.parameters.keys():
+        new_dict = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}
+        for par in new_dict:
             if par not in Action.allowed_params[spl[0]]:
                 raise RuntimeError("'{}' is not a valid parameter for action '{}'. Parameters compatible with this "
                                    "action include: {}".format(par, spl[0],
                                                                ', '.join(list(Action.allowed_params[spl[0]]))))
+        self.parameters.update(new_dict)
         if 't' in self.parameters.keys():
             self.parameters['t'] = self.parameters['t'].rstrip('s')
 
