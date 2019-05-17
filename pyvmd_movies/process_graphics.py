@@ -58,7 +58,6 @@ def postprocessor(script):
         convert_command += ' -append '
         for fr in range(script.scenes[0].total_frames):
             frames = [fr] * (nrows*ncols)
-            print('fff', frames, convert_command)
             os.system('convert ' + convert_command.format(*frames) + '{}-{}.png'.format(script.name, fr))
             
 

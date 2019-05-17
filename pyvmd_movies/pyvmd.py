@@ -41,19 +41,33 @@ class Script:
         # the part below controls TCL/VMD rendering
         for scene in self.scenes:
             tcl_script = scene.tcl()
+            # in scene.tcl() we also do matplotlib figs generation
             if scene.run_vmd:
                 with open('script_{}.tcl'.format(scene.name), 'w') as out:
                     out.write(tcl_script)
                 os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
                 os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; '
                           'rm $(echo $i | sed "s/tga/dat/g"); done'.format(scene.name))
-            # here we would do matplotlib figs generation
         # at this stage, each scene should have all its initial frames rendered
         process_graphics.postprocessor(self)
         os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
                   '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" movie.mp4'.format(self.fps, self.name))
         if not self.keepframes:
-            os.system('rm {}*.png'.format('scene_1-'))
+            for sc in self.scenes:
+                if '/' in sc.name or '\\' in sc.name or '~' in sc.name:
+                    raise RuntimeError('For security reasons, cleanup of scenes that contain path-like elements'
+                                       '(slashes, backslashes, tildes) is prohibited.\n\n'
+                                       'Error triggered by: {}'.format(sc.name))
+                else:
+                    os.system('rm {}-[0-9]*.png'.format(sc.name))
+                    os.system('rm overlay[0-9]*-{}-[0-9]*.png'.format(sc.name))
+                    os.system('rm script_{}.tcl'.format(sc.name))
+            if '/' in self.name or '\\' in self.name or '~' in self.name:
+                raise RuntimeError('For security reasons, cleanup of scenes that contain path-like elements'
+                                   '(slashes, backslashes, tildes) is prohibited.\n\n'
+                                   'Error triggered by: {}'.format(self.name))
+            else:
+                os.system('rm {}-[0-9]*.png'.format(self.name))
     
     def show_script(self):
         """
@@ -117,12 +131,18 @@ class Script:
                                    "global directives are: {}".format(entries[0], ", ".join(Script.allowed_globals)))
             dirs[entries[0]] = {}
             for entry in entries[1:]:
-                key, value = entry.split('=')
-                if key not in Script.allowed_params[entries[0]]:
-                    raise RuntimeError("'{}' is not a parameter compatible with the directive {}. Allowed parameters "
-                                       "include: {}".format(key, entries[0],
-                                                            ", ".join(list(Script.allowed_params[entries[0]]))))
-                dirs[entries[0]][key] = value
+                try:
+                    key, value = entry.split('=')
+                except ValueError:
+                    raise RuntimeError("Entries should contain parameters formatted as 'key=value' pairs,"
+                                       "'{}' in line '{}' does not follow that specification".format(entry, directive))
+                else:
+                    allowed = Script.allowed_params[entries[0]]
+                    if key not in allowed:
+                        raise RuntimeError("'{}' is not a parameter compatible with the directive {}. Allowed "
+                                           "parameters include: {}".format(key, entries[0],
+                                                                           ", ".join(list(allowed))))
+                    dirs[entries[0]][key] = value
         return dirs
     
     def parse_scenes(self, scenes):

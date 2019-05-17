@@ -16,7 +16,7 @@ proc vmdrestoremymaterials {} {
   material change specular Opaque 0.500000
   material change shininess Opaque 0.534000
   material change mirror Opaque 0.000000
-  material change opacity Opaque 1.000000
+  material change opacity Opaque 0.000000
   material change outline Opaque 0.000000
   material change outlinewidth Opaque 0.000000
   material change transmode Opaque 0.000000
@@ -403,8 +403,42 @@ mol clipplane center 5 1 top {0.0 0.0 0.0}
 mol clipplane color  5 1 top {0.5 0.5 0.5 }
 mol clipplane normal 5 1 top {0.0 0.0 1.0}
 mol clipplane status 5 1 top {0}
+mol representation Licorice 0.300000 12.000000 12.000000
+mol color Name
+mol selection {resid 422}
+mol material Opaque
+mol addrep top
+mol selupdate 2 top 0
+mol colupdate 2 top 0
+mol scaleminmax top 2 0.000000 0.000000
+mol smoothrep top 2 0
+mol drawframes top 2 {now}
+mol clipplane center 0 2 top {0.0 0.0 0.0}
+mol clipplane color  0 2 top {0.5 0.5 0.5 }
+mol clipplane normal 0 2 top {0.0 0.0 1.0}
+mol clipplane status 0 2 top {0}
+mol clipplane center 1 2 top {0.0 0.0 0.0}
+mol clipplane color  1 2 top {0.5 0.5 0.5 }
+mol clipplane normal 1 2 top {0.0 0.0 1.0}
+mol clipplane status 1 2 top {0}
+mol clipplane center 2 2 top {0.0 0.0 0.0}
+mol clipplane color  2 2 top {0.5 0.5 0.5 }
+mol clipplane normal 2 2 top {0.0 0.0 1.0}
+mol clipplane status 2 2 top {0}
+mol clipplane center 3 2 top {0.0 0.0 0.0}
+mol clipplane color  3 2 top {0.5 0.5 0.5 }
+mol clipplane normal 3 2 top {0.0 0.0 1.0}
+mol clipplane status 3 2 top {0}
+mol clipplane center 4 2 top {0.0 0.0 0.0}
+mol clipplane color  4 2 top {0.5 0.5 0.5 }
+mol clipplane normal 4 2 top {0.0 0.0 1.0}
+mol clipplane status 4 2 top {0}
+mol clipplane center 5 2 top {0.0 0.0 0.0}
+mol clipplane color  5 2 top {0.5 0.5 0.5 }
+mol clipplane normal 5 2 top {0.0 0.0 1.0}
+mol clipplane status 5 2 top {0}
 mol rename top TRF1.pdb
-set viewpoints([molinfo top]) {{{1 0 0 -25.4526} {0 1 0 -31.488} {0 0 1 -10.5044} {0 0 0 1}} {{-0.27059 -0.959405 0.0795425 0} {0.287522 -0.00168521 0.957772 0} {-0.918757 0.282034 0.276305 0} {0 0 0 1}} {{0.0272377 0 0 0} {0 0.0272377 0 0} {0 0 0.0272377 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
+set viewpoints([molinfo top]) {{{1 0 0 -25.4526} {0 1 0 -31.488} {0 0 1 -10.5044} {0 0 0 1}} {{-0.305725 -0.943852 0.125219 0} {0.334604 0.0166199 0.942212 0} {-0.891389 0.329957 0.310734 0} {0 0 0 1}} {{0.0272377 0 0 0} {0 0.0272377 0 0} {0 0 0.0272377 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
 lappend viewplist [molinfo top]
 set topmol [molinfo top]
 # done with molecule 0
@@ -561,6 +595,7 @@ color scale colors WBlk {1.0 1.0 1.0} {0.5 0.5 0.5} {0.0 0.0 0.0}
     {color Segname {} blue}
     {color Conformation {all} blue}
     {color Molecule {0} blue}
+    {color Molecule {TRF1.pdb} blue}
     {color Structure {3_10_Helix} blue}
     {color Surface {Grasp} gray}
     {color Labels {Springs} orange}
