@@ -352,7 +352,7 @@ class Action:
         :return: str, TCL code
         """
         actions_requiring_tcl = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
-                                 'make_opaque', 'center_view', 'add_label']
+                                 'make_opaque', 'center_view', 'add_label']  # TODO "add"/"remove" or "show" label?
         actions_requiring_genfig = ['show_figure', 'add_overlay']
         if set(self.action_type).intersection(set(actions_requiring_genfig)):
             process_graphics.gen_fig(self)

@@ -161,6 +161,9 @@ def data_simple_plot(action, datafile, basename):
     font = {'size': 22}
     plt.rc('font', **font)
     plt.rc('axes', linewidth=2)
+    res = action.scene.resolution
+    asp_ratio = res[1]/res[0]
+    plt.rcParams['figure.figsize'] = [6.4, 6.4 * asp_ratio]
     draw_point = True
     data = np.loadtxt(datafile)
     try:
