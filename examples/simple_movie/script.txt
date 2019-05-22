@@ -1,4 +1,4 @@
-$ global          fps=10
+$ global          fps=10 keepframes=f
 $ scene_1         visualization=test.vmd resolution=500,500
 
 

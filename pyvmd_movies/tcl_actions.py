@@ -151,6 +151,16 @@ def gen_setup(action):
             setups['ani'] = 'set mtop [molinfo top]\nset nrep [molinfo $mtop get numreps]\n' \
                             'for {{set i 0}} {{$i < $nrep}} {{incr i}} {{\n' \
                             'mol smoothrep $mtop $i {}\n}}\n'.format(smooth)
+    if 'add_label' in action.action_type:
+        try:
+            label_color = action.parameters['color']
+        except KeyError:
+            label_color = 'black'
+        atom_index = action.parameters['atom_index']
+        label = action.parameters['label']
+        check_if_convertible(atom_index, int, 'atom_index')
+        setups['adl'] = 'label add Atoms 0/{}\nlabel textsize 1.5\nlabel textthickness 2\ncolor Labels Atoms {}\n' \
+                        'label textformat Atoms 0 "{}"\n\n'.format(atom_index, label_color, label)
     return setups
 
 

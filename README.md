@@ -59,6 +59,7 @@ Sample movie scripts are available in the `examples` directory.
 + do_nothing (t=...s)
 + add_overlay (t=...s, \[figure_index=..., datafile=..., origin=0,0
 relative_size=1 frames=init_frame:final_frame\])
++ add_label(label=..., atom_index=..., \[label_color=...\])
 
 (Square brackets denote optional parameters. Values in bold font
 indicate defaults when parameters are optional)

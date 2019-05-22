@@ -318,7 +318,7 @@ class Action:
     or zoom-in
     """
     allowed_actions = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
-                       'make_opaque', 'center_view', 'show_figure', 'add_overlay']
+                       'make_opaque', 'center_view', 'show_figure', 'add_overlay', 'add_label']
     
     allowed_params = {'do_nothing': {'t'},
                       'animate': {'frames', 'smooth', 't', 'sigmoid'},
@@ -330,6 +330,7 @@ class Action:
                       'center_view': {'selection'},
                       'show_figure': {'figure_index', 't'},
                       'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames'},
+                      'add_label': {'color', 'atom_index', 'label'}
                       }
     
     def __init__(self, scene, description):
@@ -351,7 +352,7 @@ class Action:
         :return: str, TCL code
         """
         actions_requiring_tcl = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
-                                 'make_opaque', 'center_view']
+                                 'make_opaque', 'center_view', 'add_label']
         actions_requiring_genfig = ['show_figure', 'add_overlay']
         if set(self.action_type).intersection(set(actions_requiring_genfig)):
             process_graphics.gen_fig(self)
