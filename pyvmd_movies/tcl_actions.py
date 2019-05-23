@@ -104,7 +104,6 @@ def gen_loop(action):
     setup = gen_setup(action)
     iterators = gen_iterators(action)
     command = gen_command(action)
-    rendermethod = 'Tachyon'
     code = "\n\nset fr {}\n".format(action.initframe)
     for act in setup.keys():
         code = code + setup[act]
@@ -115,10 +114,12 @@ def gen_loop(action):
         code += '  puts "rendering frame: $fr"\n'
         for act in command.keys():
             code = code + '  ' + command[act]
-        code += '  render {rm} {sc}-$fr.dat\n  "/usr/local/lib/vmd/tachyon_LINUXAMD64" ' \
-                '-aasamples 12 {sc}-$fr.dat -format TARGA -o {sc}-$fr.tga -res {rs}' \
-                '\n  incr fr\n}}'.format(rm=rendermethod, sc=action.scene.name,
-                                         rs=' '.join(str(x) for x in action.scene.resolution))
+        if action.scene.script.draft:
+            code += '  render snapshot {sc}-$fr.tga\n  incr fr\n}}'.format(sc=action.scene.name)
+        else:
+            code += '  render Tachyon {sc}-$fr.dat\n  "/usr/local/lib/vmd/tachyon_LINUXAMD64" ' \
+                    '-aasamples 12 {sc}-$fr.dat -format TARGA -o {sc}-$fr.tga -res {rs}' \
+                    '\n  incr fr\n}}'.format(sc=action.scene.name, rs=' '.join(str(x) for x in action.scene.resolution))
     return code
 
 

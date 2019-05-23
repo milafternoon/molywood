@@ -45,9 +45,12 @@ class Script:
             if scene.run_vmd:
                 with open('script_{}.tcl'.format(scene.name), 'w') as out:
                     out.write(tcl_script)
-                os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))  # TODO dispdev + snap in draft
-                os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; '
-                          'rm $(echo $i | sed "s/tga/dat/g"); done'.format(scene.name))
+                ddev = '-dispdev none' if not self.draft else ''
+                os.system('vmd {} -e script_{}.tcl'.format(ddev, scene.name))
+                os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); '
+                          'rm $i'.format(scene.name))
+                if not self.draft:
+                    os.system('rm $(echo $i | sed "s/tga/dat/g"); done')
         # at this stage, each scene should have all its initial frames rendered
         process_graphics.postprocessor(self)
         os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
@@ -59,7 +62,7 @@ class Script:
                                        '(slashes, backslashes, tildes) is prohibited.\n\n'
                                        'Error triggered by: {}'.format(sc.name))
                 else:
-                    os.system('rm {}-[0-9]*.png'.format(sc.name))
+                    os.system('rm {}-[0-9]*.png'.format(sc.name))  # TODO only cleanup when files are present
                     os.system('rm overlay[0-9]*-{}-[0-9]*.png'.format(sc.name))
                     os.system('rm script_{}.tcl'.format(sc.name))
             if '/' in self.name or '\\' in self.name or '~' in self.name:
@@ -213,8 +216,6 @@ class Script:
             pass
         for scene in self.scenes:
             scene.calc_framenum()
-            if self.draft:
-                scene.resolution = [200, 200]
         
 
 class Scene:
@@ -297,8 +298,9 @@ class Scene:
                 code += 'mol delrep 0 top\nmol representation NewCartoon 0.300000 10.000000 4.100000 0\n' \
                         'mol color Structure\nmol selection {all}\nmol material Opaque\nmol addrep top\n'
             code += 'axes location off\n'
-            code += 'render options Tachyon "/usr/local/lib/vmd/tachyon_LINUXAMD64" -aasamples 12 %s -format ' \
-                    'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
+            if not self.script.draft:
+                code += 'render options Tachyon "/usr/local/lib/vmd/tachyon_LINUXAMD64" -aasamples 12 %s -format ' \
+                        'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
             action_code = ''
             for ac in self.actions:
                 action_code += ac.generate()
@@ -353,7 +355,7 @@ class Action:
         :return: str, TCL code
         """
         actions_requiring_tcl = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
-                                 'make_opaque', 'center_view', 'add_label']  # TODO "add"/"remove" or "show" label?
+                                 'make_opaque', 'center_view', 'add_label', 'remove_label']
         actions_requiring_genfig = ['show_figure', 'add_overlay']
         if set(self.action_type).intersection(set(actions_requiring_genfig)):
             process_graphics.gen_fig(self)
