@@ -161,6 +161,10 @@ def gen_setup(action):
         check_if_convertible(atom_index, int, 'atom_index')
         setups['adl'] = 'label add Atoms 0/{}\nlabel textsize 1.5\nlabel textthickness 2\ncolor Labels Atoms {}\n' \
                         'label textformat Atoms 0 "{}"\n\n'.format(atom_index, label_color, label)
+    if 'remove_label' in action.action_type:
+        lab_id = action.parameters['id']
+        check_if_convertible(lab_id, int, 'id')
+        setups['rml'] = 'label delete Atoms {}'.format(lab_id)
     return setups
 
 

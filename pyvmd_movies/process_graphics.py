@@ -163,7 +163,7 @@ def data_simple_plot(action, datafile, basename):
     plt.rc('axes', linewidth=2)
     res = action.scene.resolution
     asp_ratio = res[1]/res[0]
-    plt.rcParams['figure.figsize'] = [6.4, 6.4 * asp_ratio]
+    plt.rcParams['figure.figsize'] = [6.4, 6.4 * asp_ratio]  # TODO add option to set user-def aspect ratio
     draw_point = True
     data = np.loadtxt(datafile)
     try:

@@ -45,7 +45,7 @@ class Script:
             if scene.run_vmd:
                 with open('script_{}.tcl'.format(scene.name), 'w') as out:
                     out.write(tcl_script)
-                os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))
+                os.system('vmd -dispdev none -e script_{}.tcl'.format(scene.name))  # TODO dispdev + snap in draft
                 os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); rm $i; '
                           'rm $(echo $i | sed "s/tga/dat/g"); done'.format(scene.name))
         # at this stage, each scene should have all its initial frames rendered
@@ -318,7 +318,7 @@ class Action:
     or zoom-in
     """
     allowed_actions = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
-                       'make_opaque', 'center_view', 'show_figure', 'add_overlay', 'add_label']
+                       'make_opaque', 'center_view', 'show_figure', 'add_overlay', 'add_label', 'remove_label']
     
     allowed_params = {'do_nothing': {'t'},
                       'animate': {'frames', 'smooth', 't', 'sigmoid'},
@@ -330,7 +330,8 @@ class Action:
                       'center_view': {'selection'},
                       'show_figure': {'figure_index', 't'},
                       'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames'},
-                      'add_label': {'color', 'atom_index', 'label'}
+                      'add_label': {'color', 'atom_index', 'label'},
+                      'remove_label': {'id'}
                       }
     
     def __init__(self, scene, description):
