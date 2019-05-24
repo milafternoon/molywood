@@ -40,8 +40,8 @@ class Script:
         """
         # the part below controls TCL/VMD rendering
         for scene in self.scenes:
-            tcl_script = scene.tcl()
-            # in scene.tcl() we also do matplotlib figs generation
+            tcl_script = scene()
+            # in scene() we also do generation of matplotlib figs on-the-fly
             if scene.run_vmd:
                 with open('script_{}.tcl'.format(scene.name), 'w') as out:
                     out.write(tcl_script)
@@ -58,15 +58,20 @@ class Script:
         if not self.keepframes:
             for sc in self.scenes:
                 if '/' in sc.name or '\\' in sc.name or '~' in sc.name:
-                    raise RuntimeError('For security reasons, cleanup of scenes that contain path-like elements'
+                    raise RuntimeError('For security reasons, cleanup of scenes that contain path-like elements '
                                        '(slashes, backslashes, tildes) is prohibited.\n\n'
                                        'Error triggered by: {}'.format(sc.name))
                 else:
-                    os.system('rm {}-[0-9]*.png'.format(sc.name))  # TODO only cleanup when files are present
-                    os.system('rm overlay[0-9]*-{}-[0-9]*.png'.format(sc.name))
-                    os.system('rm script_{}.tcl'.format(sc.name))
+                    if any([x for x in os.listdir('.') if x.startswith(sc.name) and x.endswith('png')]):
+                        os.system('rm {}-[0-9]*.png'.format(sc.name))
+                    if any([x for x in os.listdir('.') if x.startswith('overlay') and x.endswith('png')
+                            and sc.name in x]):
+                        os.system('rm overlay[0-9]*-{}-[0-9]*.png'.format(sc.name))
+                    if any([x for x in os.listdir('.') if x.startswith('script') and x.endswith('tcl')
+                            and sc.name in x]):
+                        os.system('rm script_{}.tcl'.format(sc.name))
             if '/' in self.name or '\\' in self.name or '~' in self.name:
-                raise RuntimeError('For security reasons, cleanup of scenes that contain path-like elements'
+                raise RuntimeError('For security reasons, cleanup of scenes that contain path-like elements '
                                    '(slashes, backslashes, tildes) is prohibited.\n\n'
                                    'Error triggered by: {}'.format(self.name))
             else:
@@ -277,11 +282,12 @@ class Scene:
             cumsum += action.framenum
         self.total_frames = cumsum
             
-    def tcl(self):
+    def __call__(self):
         """
         This is the top-level function that produces
         an executable TCL script based on the corresponding
-        action.tcl() functions
+        action.generate() functions, as well as produces
+        matplotlib figures
         :return: str, TCL code
         """
         if self.visualization or self.structure:
@@ -318,7 +324,7 @@ class Action:
     Intended to represent a single action in
     a movie, e.g. a rotation, change of material
     or zoom-in
-    """
+    """  # TODO add change_property
     allowed_actions = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
                        'make_opaque', 'center_view', 'show_figure', 'add_overlay', 'add_label', 'remove_label']
     
