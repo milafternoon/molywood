@@ -48,9 +48,9 @@ class Script:
                 ddev = '-dispdev none' if not self.draft else ''
                 os.system('vmd {} -e script_{}.tcl'.format(ddev, scene.name))
                 os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); '
-                          'rm $i'.format(scene.name))
+                          'rm $i; done'.format(scene.name))
                 if not self.draft:
-                    os.system('rm $(echo $i | sed "s/tga/dat/g"); done')
+                    os.system('for i in $(ls {}-*png); do rm $(echo $i | sed "s/png/dat/g"); done'.format(scene.name))
         # at this stage, each scene should have all its initial frames rendered
         process_graphics.postprocessor(self)
         os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
@@ -324,8 +324,8 @@ class Action:
     Intended to represent a single action in
     a movie, e.g. a rotation, change of material
     or zoom-in
-    """  # TODO add change_property
-    allowed_actions = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
+    """  # TODO add change_property?
+    allowed_actions = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent', 'highlight',
                        'make_opaque', 'center_view', 'show_figure', 'add_overlay', 'add_label', 'remove_label']
     
     allowed_params = {'do_nothing': {'t'},
@@ -334,6 +334,7 @@ class Action:
                       'zoom_in': {'scale', 't', 'sigmoid'},
                       'zoom_out': {'scale', 't', 'sigmoid'},
                       'make_transparent': {'material', 't', 'sigmoid'},
+                      'highlight': {'selection', 't', 'color', 'mode'},
                       'make_opaque': {'material', 't', 'sigmoid'},
                       'center_view': {'selection'},
                       'show_figure': {'figure_index', 't'},
@@ -361,7 +362,7 @@ class Action:
         :return: str, TCL code
         """
         actions_requiring_tcl = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
-                                 'make_opaque', 'center_view', 'add_label', 'remove_label']
+                                 'make_opaque', 'center_view', 'add_label', 'remove_label', 'highlight']
         actions_requiring_genfig = ['show_figure', 'add_overlay']
         if set(self.action_type).intersection(set(actions_requiring_genfig)):
             process_graphics.gen_fig(self)
@@ -430,7 +431,8 @@ class SimultaneousAction(Action):
     and rotation)
     """
     def __init__(self, scene, description):
-        self.overlays = {}  # need special treatment for overlays as there can be many
+        self.overlays = {}  # need special treatment for overlays as there can be many ('overlay1', 'overlay2', ...)
+        self.highlights = {}  # the same goes for highlights ('hl1', 'hl2', ...)
         super().__init__(scene, description)
         
     def parse(self, command):
@@ -448,20 +450,22 @@ class SimultaneousAction(Action):
         actions = [comm.strip() for comm in command.split(';')]
         for action in actions:
             if action.split()[0] == 'add_overlay':
-                self.parse_overlays(action)
+                self.parse_many(action, self.overlays, 'overlay')
+            elif action.split()[0] == 'highlight':
+                self.parse_many(action, self.highlights, 'hl')
             else:
                 super().parse(action)
         self.action_type = [action.split()[0] for action in actions]
-        if ('zoom_in' in self.action_type and 'zoom_out' in self.action_type) \
-                or ('make_opaque' in self.action_type and 'make_transparent' in self.action_type):
+        if 'zoom_in' in self.action_type and 'zoom_out' in self.action_type:  # TODO enable multiple make_op/make_trpt?
             raise RuntimeError("actions {} are mutually exclusive".format(", ".join(self.action_type)))
     
-    def parse_overlays(self, directive):
-        overlays_count = len(list(self.overlays.keys()))
-        ind = str(overlays_count + 1)
+    @staticmethod
+    def parse_many(directive, actions_dict, keyword):
+        actions_count = len(list(actions_dict.keys()))
+        ind = str(actions_count + 1)
         spl = directive.split()
-        self.overlays["overlay" + ind] = {prm.split('=')[0]: prm.split('=')[1] for prm in spl[1:]}
-
+        actions_dict[keyword + ind] = {prm.split('=')[0]: prm.split('=')[1] for prm in spl[1:]}
+    
 
 if __name__ == "__main__":
     try:

@@ -61,6 +61,7 @@ Sample movie scripts are available in the `examples` directory.
 relative_size=1 frames=init_frame:final_frame\])
 + add_label(label=..., atom_index=..., \[label_color=...\])
 + remove_label(id=...)
++ highlight (selection=..., t=..., \[color=..., mode=u/d/ud\])
 
 (Square brackets denote optional parameters. Values in bold font
 indicate defaults when parameters are optional)

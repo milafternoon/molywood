@@ -160,12 +160,38 @@ def gen_setup(action):
         atom_index = action.parameters['atom_index']
         label = action.parameters['label']
         check_if_convertible(atom_index, int, 'atom_index')
-        setups['adl'] = 'label add Atoms 0/{}\nlabel textsize 1.5\nlabel textthickness 2\ncolor Labels Atoms {}\n' \
+        setups['adl'] = 'label add Atoms 0/{}\nlabel textsize 1.5\nlabel textthickness 3\ncolor Labels Atoms {}\n' \
                         'label textformat Atoms 0 "{}"\n\n'.format(atom_index, label_color, label)
     if 'remove_label' in action.action_type:
         lab_id = action.parameters['id']
         check_if_convertible(lab_id, int, 'id')
         setups['rml'] = 'label delete Atoms {}'.format(lab_id)
+    if 'highlight' in action.action_type:
+        colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
+        setups['hlt'] = ''
+        try:  # if action is a SimultaneousAction instance (might have one or multiple highlights)
+            hls = [action.highlights[x] for x in action.highlights.keys()]
+            hl_labels = list(action.highlights.keys())
+        except AttributeError:  # single highlight
+            hls = [action.parameters]
+            hl_labels = ['hlt']
+        for lb, hl in zip(hl_labels, hls):
+            setups[lb] += 'material add copy Opaque\nset mat{} [lindex [material list] end]\n' \
+                          'material change opacity $mat{} 0\n'.format(lb, lb)
+            try:
+                color_key = hl['color']
+            except KeyError:
+                color_key = 'red'
+            if color_key in colors.keys():
+                cl = colors[color_key]
+            else:
+                try:
+                    cl = int(color_key)
+                except ValueError:
+                    raise RuntimeError('{} is not a valid color description'.format(color_key))
+            sel = hl['selection']
+            setups[lb] += 'mol representation NewCartoon 0.31 10 4.1 0\nmol color ColorID {}\n' \
+                          'mol material $mat{}\nmol selection {{{}}}\nmol addrep top\n'.format(cl, lb, sel)
     return setups
 
 
@@ -236,6 +262,30 @@ def gen_iterators(action):
             check_if_convertible(val, int, 'frames')
         arr = np.linspace(int(animation_frames[0]), int(animation_frames[1]), action.framenum).astype(int)
         iterators['ani'] = ' '.join([str(int(el)) for el in arr])
+    if 'highlight' in action.action_type:
+        try:  # if action is a SimultaneousAction instance (might have one or multiple highlights)
+            hls = [action.highlights[x] for x in action.highlights.keys()]
+            hl_labels = list(action.highlights.keys())
+        except AttributeError:  # single highlight
+            hls = [action.parameters]
+            hl_labels = ['hlt']
+        for lb, hl in zip(hl_labels, hls):
+            print(lb, hl)
+            try:
+                mode = hl['mode']
+            except KeyError:
+                mode = 'ud'
+            margin = int(0.25 * action.framenum)
+            arr = np.cumsum(sigmoid_norm_sum(1, margin, abruptness))
+            if mode == 'u':
+                arr = np.concatenate((arr, np.ones(action.framenum - margin)))
+            elif mode == 'd':
+                arr = np.concatenate((np.ones(action.framenum - margin), arr[::-1]))
+            elif mode == 'ud':
+                arr = np.concatenate((arr, np.ones(action.framenum - 2*margin), arr[::-1]))
+            else:
+                raise RuntimeError('"mode" should be "u", "d" or "ud"')
+            iterators[lb] = ' '.join([str(round(el, num_precision)) for el in arr])
     return iterators
     
 
@@ -264,6 +314,13 @@ def gen_command(action):
         commands['zou'] = "set t [lindex $zou $i]\n  scale by $t\n"
     if 'animate' in action.action_type:
         commands['ani'] = "set t [lindex $ani $i]\n  animate goto $t\n"
+    if 'highlight' in action.action_type:
+        try:  # if action is a SimultaneousAction instance (might have one or multiple highlights)
+            hl_labels = list(action.highlights.keys())
+        except AttributeError:  # single highlight
+            hl_labels = ['hlt']
+        for lb in hl_labels:
+            commands[lb] = "set t [lindex ${} $i]\n  material change opacity $mat{} $t\n".format(lb, lb)
     return commands
 
 
