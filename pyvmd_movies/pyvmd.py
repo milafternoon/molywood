@@ -395,6 +395,11 @@ class Action:
         self.parameters.update(new_dict)
         if 't' in self.parameters.keys():
             self.parameters['t'] = self.parameters['t'].rstrip('s')
+        if not isinstance(self, SimultaneousAction):
+            if spl[0] == 'highlight':
+                self.highlights = {'hl1': self.parameters}
+            if spl[0] in ['make_transparent', 'make_opaque']:
+                self.transp_changes = {spl[0]: self.parameters}
 
     @staticmethod
     def split_input_line(line):
@@ -433,6 +438,7 @@ class SimultaneousAction(Action):
     def __init__(self, scene, description):
         self.overlays = {}  # need special treatment for overlays as there can be many ('overlay1', 'overlay2', ...)
         self.highlights = {}  # the same goes for highlights ('hl1', 'hl2', ...)
+        self.transp_changes = {}  # ...and for make_opaque/make_transparent
         super().__init__(scene, description)
         
     def parse(self, command):
@@ -453,10 +459,11 @@ class SimultaneousAction(Action):
                 self.parse_many(action, self.overlays, 'overlay')
             elif action.split()[0] == 'highlight':
                 self.parse_many(action, self.highlights, 'hl')
-            else:
-                super().parse(action)
+            elif action.split[0] in ['make_transparent', 'make_opaque']:
+                self.parse_many(action, self.transp_changes, action.split[0])
+            super().parse(action)
         self.action_type = [action.split()[0] for action in actions]
-        if 'zoom_in' in self.action_type and 'zoom_out' in self.action_type:  # TODO enable multiple make_op/make_trpt?
+        if 'zoom_in' in self.action_type and 'zoom_out' in self.action_type:
             raise RuntimeError("actions {} are mutually exclusive".format(", ".join(self.action_type)))
     
     @staticmethod

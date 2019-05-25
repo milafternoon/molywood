@@ -91,13 +91,12 @@ def logistic_deriv(x, k):
 def gen_loop(action):
     """
     The main fn that generates TCL code (mostly loops,
-    hence the name). We use three-letter names for
+    hence the name). We mostly use three-letter names for
     variables/dict entries according to the convention:
     center_view -> ctr;
     rotate -> rot;
     zoom_in/zoom_out -> zin/zou;
-    make_transparent/make_opaque -> mtr/mop;
-    animate -> ani
+    animate -> ani etc.
     :param action: Action or SimultaneousAction, object to extract info from
     :return: str, formatted TCL code
     """
@@ -169,12 +168,8 @@ def gen_setup(action):
     if 'highlight' in action.action_type:
         colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
         setups['hlt'] = ''
-        try:  # if action is a SimultaneousAction instance (might have one or multiple highlights)
-            hls = [action.highlights[x] for x in action.highlights.keys()]
-            hl_labels = list(action.highlights.keys())
-        except AttributeError:  # single highlight
-            hls = [action.parameters]
-            hl_labels = ['hlt']
+        hls = [action.highlights[x] for x in action.highlights.keys()]
+        hl_labels = list(action.highlights.keys())
         for lb, hl in zip(hl_labels, hls):
             setups[lb] += 'material add copy Opaque\nset mat{} [lindex [material list] end]\n' \
                           'material change opacity $mat{} 0\n'.format(lb, lb)
@@ -205,19 +200,7 @@ def gen_iterators(action):
     """
     iterators = {}
     num_precision = 5
-    try:
-        sigmoid = action.parameters['sigmoid']
-        sls = True if sigmoid.lower() == 'sls' else False  # sls stands for smooth-linear-smooth
-        sigmoid = True if sigmoid.lower() in ['true', 't', 'y', 'yes'] else False
-    except KeyError:
-        sigmoid = True
-        sls = False
-    try:
-        abruptness = float(action.parameters['abruptness'])
-    except KeyError:
-        abruptness = 1
-    else:
-        check_if_convertible(abruptness, float, 'abruptness')
+    sigmoid, sls, abruptness = check_sigmoid(action.parameters)
     if 'rotate' in action.action_type:
         angle = action.parameters['angle']
         check_if_convertible(angle, float, 'smooth')
@@ -244,18 +227,20 @@ def gen_iterators(action):
         else:
             arr = np.ones(action.framenum) * 1/(float(scale)**(1/action.framenum))
         iterators['zou'] = ' '.join([str(round(el, num_precision)) for el in arr])
-    if 'make_transparent' in action.action_type:
-        if sigmoid:
-            arr = 1 - np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
-        else:
-            arr = np.linspace(1, 0, action.framenum)
-        iterators['mtr'] = ' '.join([str(round(el, num_precision)) for el in arr])
-    if 'make_opaque' in action.action_type:
-        if sigmoid:
-            arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
-        else:
-            arr = np.linspace(0, 1, action.framenum)
-        iterators['mop'] = ' '.join([str(round(el, num_precision)) for el in arr])
+    if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
+        for t_ch in action.transp_changes.keys():
+            sigmoid, sls, abruptness = check_sigmoid(action.transp_changes[t_ch])
+            if sigmoid:
+                if 'transparent' in t_ch:
+                    arr = 1 - np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
+                else:
+                    arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
+            else:
+                if 'transparent' in t_ch:
+                    arr = np.linspace(1, 0, action.framenum)
+                else:
+                    arr = np.linspace(0, 1, action.framenum)
+            iterators[t_ch] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'animate' in action.action_type:
         animation_frames = [x for x in action.parameters['frames'].split(':')]
         for val in animation_frames:
@@ -263,12 +248,8 @@ def gen_iterators(action):
         arr = np.linspace(int(animation_frames[0]), int(animation_frames[1]), action.framenum).astype(int)
         iterators['ani'] = ' '.join([str(int(el)) for el in arr])
     if 'highlight' in action.action_type:
-        try:  # if action is a SimultaneousAction instance (might have one or multiple highlights)
-            hls = [action.highlights[x] for x in action.highlights.keys()]
-            hl_labels = list(action.highlights.keys())
-        except AttributeError:  # single highlight
-            hls = [action.parameters]
-            hl_labels = ['hlt']
+        hls = [action.highlights[x] for x in action.highlights.keys()]
+        hl_labels = list(action.highlights.keys())
         for lb, hl in zip(hl_labels, hls):
             print(lb, hl)
             try:
@@ -287,7 +268,6 @@ def gen_iterators(action):
                 raise RuntimeError('"mode" should be "u", "d" or "ud"')
             iterators[lb] = ' '.join([str(round(el, num_precision)) for el in arr])
     return iterators
-    
 
 def gen_command(action):
     """
@@ -305,9 +285,9 @@ def gen_command(action):
             raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given instead".format(axis))
         commands['rot'] = "set t [lindex $rot $i]\n  rotate {} by $t\n".format(axis.lower())
     if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
-        material = action.parameters['material']
-        keyw = 'mtr' if 'make_transparent' in action.action_type else 'mop'
-        commands[keyw] = "set t [lindex ${} $i]\n  material change opacity {} $t\n".format(keyw, material)
+        for t_ch in action.transp_changes.keys():
+            material = action.transp_changes[t_ch]['material']
+            commands[t_ch] = "set t [lindex ${} $i]\n  material change opacity {} $t\n".format(t_ch, material)
     if 'zoom_in' in action.action_type:
         commands['zin'] = "set t [lindex $zin $i]\n  scale by $t\n"
     elif 'zoom_out' in action.action_type:
@@ -315,10 +295,7 @@ def gen_command(action):
     if 'animate' in action.action_type:
         commands['ani'] = "set t [lindex $ani $i]\n  animate goto $t\n"
     if 'highlight' in action.action_type:
-        try:  # if action is a SimultaneousAction instance (might have one or multiple highlights)
-            hl_labels = list(action.highlights.keys())
-        except AttributeError:  # single highlight
-            hl_labels = ['hlt']
+        hl_labels = list(action.highlights.keys())
         for lb in hl_labels:
             commands[lb] = "set t [lindex ${} $i]\n  material change opacity $mat{} $t\n".format(lb, lb)
     return commands
@@ -329,3 +306,19 @@ def check_if_convertible(string, object_type, param_name):
         _ = object_type(string)
     except ValueError:
         raise RuntimeError("'{}' must be {}, {} was given instead".format(param_name, object_type, string))
+
+def check_sigmoid(params_dict):
+    try:
+        sigmoid = params_dict['sigmoid']
+        sls = True if sigmoid.lower() == 'sls' else False  # sls stands for smooth-linear-smooth
+        sigmoid = True if sigmoid.lower() in ['true', 't', 'y', 'yes'] else False
+    except KeyError:
+        sigmoid = True
+        sls = False
+    try:
+        abruptness = float(params_dict['abruptness'])
+    except KeyError:
+        abruptness = 1
+    else:
+        check_if_convertible(abruptness, float, 'abruptness')
+    return sigmoid, sls, abruptness
