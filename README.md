@@ -44,9 +44,10 @@ explanations below).
 
 Sample movie scripts are available in the `examples` directory.
 
-`pyvmd` can be run from the console as:
+`pyvmd` can be run from the console (e.g. in the `examples/simple_movie`
+directory) as:
 
- `python pyvmd.py examples/simple_movie/script.txt`
+ `python ../../pyvmd.py script.txt`
 
 ### List of available action keywords and parameters:
 
@@ -61,7 +62,7 @@ Sample movie scripts are available in the `examples` directory.
 relative_size=1 frames=init_frame:final_frame\])
 + add_label(label=..., atom_index=..., \[label_color=...\])
 + remove_label(id=...)
-+ highlight (selection=..., t=..., \[color=..., mode=u/d/ud\])
++ highlight (selection=..., t=..., \[color=..., mode=u/d/ud\, style=NewCartoon/Licorice/Surf/QuickSurf])
 
 (Square brackets denote optional parameters. Values in bold font
 indicate defaults when parameters are optional)

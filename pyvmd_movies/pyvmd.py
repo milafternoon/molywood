@@ -307,6 +307,8 @@ class Scene:
             if not self.script.draft:
                 code += 'render options Tachyon "/usr/local/lib/vmd/tachyon_LINUXAMD64" -aasamples 12 %s -format ' \
                         'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
+            else:
+                code += 'display resize {}'.format(' '.join(str(x) for x in self.resolution))
             action_code = ''
             for ac in self.actions:
                 action_code += ac.generate()
@@ -459,28 +461,28 @@ class SimultaneousAction(Action):
                 self.parse_many(action, self.overlays, 'overlay')
             elif action.split()[0] == 'highlight':
                 self.parse_many(action, self.highlights, 'hl')
-            elif action.split[0] in ['make_transparent', 'make_opaque']:
-                self.parse_many(action, self.transp_changes, action.split[0])
+            elif action.split()[0] in ['make_transparent', 'make_opaque']:
+                self.parse_many(action, self.transp_changes, action.split()[0])
             super().parse(action)
         self.action_type = [action.split()[0] for action in actions]
         if 'zoom_in' in self.action_type and 'zoom_out' in self.action_type:
             raise RuntimeError("actions {} are mutually exclusive".format(", ".join(self.action_type)))
     
-    @staticmethod
-    def parse_many(directive, actions_dict, keyword):
+    def parse_many(self, directive, actions_dict, keyword):
         actions_count = len(list(actions_dict.keys()))
         ind = str(actions_count + 1)
-        spl = directive.split()
-        actions_dict[keyword + ind] = {prm.split('=')[0]: prm.split('=')[1] for prm in spl[1:]}
+        spl = self.split_input_line(directive)
+        actions_dict[keyword + ind] = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}
     
 
 if __name__ == "__main__":
     try:
-        scr = Script(sys.argv[1])
+        input_name = sys.argv[1]
     except IndexError:
         print("To run PyVMD, provide the name of the text input file, e.g. "
               "'python path/to/pyvmd.py script.txt'. To see and try out example "
               "input files, go to the 'examples' directory.")
         sys.exit(1)
     else:
+        scr = Script(input_name)
         scr.render()

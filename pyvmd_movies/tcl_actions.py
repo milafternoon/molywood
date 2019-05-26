@@ -159,24 +159,34 @@ def gen_setup(action):
         atom_index = action.parameters['atom_index']
         label = action.parameters['label']
         check_if_convertible(atom_index, int, 'atom_index')
-        setups['adl'] = 'label add Atoms 0/{}\nlabel textsize 1.5\nlabel textthickness 3\ncolor Labels Atoms {}\n' \
-                        'label textformat Atoms 0 "{}"\n\n'.format(atom_index, label_color, label)
+        setups['adl'] = 'set nlab [llength [label list Atoms]]\nlabel add Atoms 0/{}\nlabel textsize 1.5\n' \
+                        'label textthickness 3\ncolor Labels Atoms {}\nlabel textformat Atoms $nlab "{}"\n' \
+                        '\n'.format(atom_index, label_color, label)
     if 'remove_label' in action.action_type:
         lab_id = action.parameters['id']
         check_if_convertible(lab_id, int, 'id')
         setups['rml'] = 'label delete Atoms {}'.format(lab_id)
     if 'highlight' in action.action_type:
         colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
-        setups['hlt'] = ''
         hls = [action.highlights[x] for x in action.highlights.keys()]
         hl_labels = list(action.highlights.keys())
         for lb, hl in zip(hl_labels, hls):
+            setups[lb] = ''  # TODO enable coloring by type/name/element
             setups[lb] += 'material add copy Opaque\nset mat{} [lindex [material list] end]\n' \
                           'material change opacity $mat{} 0\n'.format(lb, lb)
             try:
                 color_key = hl['color']
             except KeyError:
                 color_key = 'red'
+            try:
+                style = hl['style'].lower()  # parse as lowercase to avoid confusion among users
+            except KeyError:
+                style = 'newcartoon'
+            style_params = {'newcartoon': ['NewCartoon', '0.32 20 4.1 0'], 'surf': ['Surf', '1.4 0.0'],
+                            'quicksurf': ['QuickSurf', '1.05 0.5 1.0 1.0'], 'licorice': ['Licorice', '0.31 12.0 12.0']}
+            if style not in style_params.keys():
+                raise RuntimeError('{} is not a valid style; "NewCartoon", "Surf", "QuickSurf" and "Licorice" are '
+                                   'available'.format(style))
             if color_key in colors.keys():
                 cl = colors[color_key]
             else:
@@ -185,8 +195,9 @@ def gen_setup(action):
                 except ValueError:
                     raise RuntimeError('{} is not a valid color description'.format(color_key))
             sel = hl['selection']
-            setups[lb] += 'mol representation NewCartoon 0.31 10 4.1 0\nmol color ColorID {}\n' \
-                          'mol material $mat{}\nmol selection {{{}}}\nmol addrep top\n'.format(cl, lb, sel)
+            setups[lb] += 'mol representation {} {}\nmol color ColorID {}\n' \
+                          'mol material $mat{}\nmol selection {{{}}}\n' \
+                          'mol addrep top\n'.format(*style_params[style], cl, lb, sel)
     return setups
 
 
@@ -256,18 +267,19 @@ def gen_iterators(action):
                 mode = hl['mode']
             except KeyError:
                 mode = 'ud'
-            margin = int(0.25 * action.framenum)
-            arr = np.cumsum(sigmoid_norm_sum(1, margin, abruptness))
             if mode == 'u':
-                arr = np.concatenate((arr, np.ones(action.framenum - margin)))
+                arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
             elif mode == 'd':
-                arr = np.concatenate((np.ones(action.framenum - margin), arr[::-1]))
+                arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))[::-1]
             elif mode == 'ud':
+                margin = int(0.25 * action.framenum)
+                arr = np.cumsum(sigmoid_norm_sum(1, margin, abruptness))
                 arr = np.concatenate((arr, np.ones(action.framenum - 2*margin), arr[::-1]))
             else:
                 raise RuntimeError('"mode" should be "u", "d" or "ud"')
             iterators[lb] = ' '.join([str(round(el, num_precision)) for el in arr])
     return iterators
+
 
 def gen_command(action):
     """
@@ -306,6 +318,7 @@ def check_if_convertible(string, object_type, param_name):
         _ = object_type(string)
     except ValueError:
         raise RuntimeError("'{}' must be {}, {} was given instead".format(param_name, object_type, string))
+
 
 def check_sigmoid(params_dict):
     try:
