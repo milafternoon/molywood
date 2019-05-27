@@ -167,7 +167,7 @@ def gen_setup(action):
         check_if_convertible(atom_index, int, 'atom_index')
         setups['adl'] = 'set nlab [llength [label list Atoms]]\nlabel add Atoms 0/{}\nlabel textsize {}\n' \
                         'label textthickness 3\ncolor Labels Atoms {}\nlabel textformat Atoms $nlab "{}"\n' \
-                        '\n'.format(tsize, atom_index, label_color, label)
+                        '\n'.format(atom_index, tsize, label_color, label)
     if 'remove_label' in action.action_type:
         lab_id = action.parameters['id']
         check_if_convertible(lab_id, int, 'id')
@@ -285,7 +285,7 @@ def gen_iterators(action):
                 mode = 'ud'
             if mode == 'u':
                 arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
-            elif mode == 'd':  # TODO how do we actually turn off a previously defined highlight?
+            elif mode == 'd':
                 arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))[::-1]
             elif mode == 'ud':
                 margin = int(0.25 * action.framenum)

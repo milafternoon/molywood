@@ -310,7 +310,7 @@ class Scene:
                         'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
             else:
                 code += 'for {{set i 0}} {{$i < 5}} {{incr i}} ' \
-                        '{{ display resize {}}}\n'.format(' '.join(str(x) for x in self.resolution))
+                        '{{ display resize {}}}\n'.format(' '.join(str(x) for x in self.resolution)) # TODO check
             action_code = ''
             for ac in self.actions:
                 action_code += ac.generate()

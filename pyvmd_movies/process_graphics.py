@@ -166,7 +166,7 @@ def data_simple_plot(action, datafile, basename):
         asp_ratio = float(action.parameters['aspect_ratio'])
     except KeyError:
         asp_ratio = res[0]/res[1]
-    plt.rcParams['figure.figsize'] = [4.8 * asp_ratio, 4.8]  # TODO add option to set user-def aspect ratio
+    plt.rcParams['figure.figsize'] = [4.8 * asp_ratio, 4.8]
     draw_point = True
     data = np.loadtxt(datafile)
     try:
