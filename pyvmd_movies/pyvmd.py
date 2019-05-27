@@ -306,11 +306,19 @@ class Scene:
                         'mol color Structure\nmol selection {all}\nmol material Opaque\nmol addrep top\n'
             code += 'axes location off\n'
             if not self.script.draft:
-                code += 'render options Tachyon "/usr/local/lib/vmd/tachyon_LINUXAMD64" -aasamples 12 %s -format ' \
-                        'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
+                if sys.platform.startswith('linux'):
+                    vmd_path = '/'.join(str(os.popen('which vmd').read().strip()).split('/')[:-2])
+                    tachyon_path = os.popen('ls {}/lib/vmd/tachyon*'.format(vmd_path)).read().strip()
+                elif sys.platform == 'darwin' or sys.platform.startswith('os'):
+                    tachyon_path = ''  # TODO test on OSX
+                else:
+                    raise RuntimeError("{} is currently not supported, please switch to a linux- or OSX-compatible"
+                                       "environment".format(sys.platform))
+                code += 'render options Tachyon "{}" -aasamples 12 %s -format ' \
+                        'TARGA -o %s.tga -res {} {}\n'.format(tachyon_path, *self.resolution)
             else:
-                code += 'for {{set i 0}} {{$i < 5}} {{incr i}} ' \
-                        '{{ display resize {}}}\n'.format(' '.join(str(x) for x in self.resolution)) # TODO check
+                code += 'for {{set i 0}} {{$i < 3}} {{incr i}} ' \
+                        '{{ display resize {}}}\nwait 1\n'.format(' '.join(str(x) for x in self.resolution))
             action_code = ''
             for ac in self.actions:
                 action_code += ac.generate()
