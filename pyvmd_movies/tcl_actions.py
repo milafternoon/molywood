@@ -41,7 +41,7 @@ def sigmoid_norm_prod(cumprod, n_points, abruptness=1):
     return increments**exponent
 
 
-def sigmoid_norm_sum_linear_mid(cumsum, n_points, abruptness=1, fraction_linear=0.6):
+def sigmoid_norm_sum_linear_mid(cumsum, n_points, abruptness=1, fraction_linear=0.4):
     """
     Yields n_points increments that sum to cumsum
     by first starting with smooth sigmoid increments,
@@ -156,12 +156,18 @@ def gen_setup(action):
             label_color = action.parameters['color']
         except KeyError:
             label_color = 'black'
+        try:
+            tsize = action.parameters['text_size']
+        except KeyError:
+            tsize = 1.0
+        else:
+            check_if_convertible(tsize, float, 'text_size')
         atom_index = action.parameters['atom_index']
         label = action.parameters['label']
         check_if_convertible(atom_index, int, 'atom_index')
-        setups['adl'] = 'set nlab [llength [label list Atoms]]\nlabel add Atoms 0/{}\nlabel textsize 1.5\n' \
+        setups['adl'] = 'set nlab [llength [label list Atoms]]\nlabel add Atoms 0/{}\nlabel textsize {}\n' \
                         'label textthickness 3\ncolor Labels Atoms {}\nlabel textformat Atoms $nlab "{}"\n' \
-                        '\n'.format(atom_index, label_color, label)
+                        '\n'.format(tsize, atom_index, label_color, label)
     if 'remove_label' in action.action_type:
         lab_id = action.parameters['id']
         check_if_convertible(lab_id, int, 'id')
@@ -172,8 +178,10 @@ def gen_setup(action):
         hl_labels = list(action.highlights.keys())
         for lb, hl in zip(hl_labels, hls):
             setups[lb] = ''
-            setups[lb] += 'material add copy Opaque\nset mat{} [lindex [material list] end]\n' \
-                          'material change opacity $mat{} 0\n'.format(lb, lb)
+            mode = hl['mode'] if 'mode' in hl.keys() else 'ud'
+            if mode in ['u', 'ud']:
+                setups[lb] += 'material add copy Opaque\nset mat{} [lindex [material list] end]\n' \
+                              'material change opacity $mat{} 0\n'.format(lb, lb)
             try:
                 color_key = hl['color']
             except KeyError:
@@ -183,7 +191,7 @@ def gen_setup(action):
             except KeyError:
                 style = 'newcartoon'
             style_params = {'newcartoon': ['NewCartoon', '0.32 20 4.1 0'], 'surf': ['Surf', '1.4 0.0'],
-                            'quicksurf': ['QuickSurf', '1.05 0.5 1.0 1.0'], 'licorice': ['Licorice', '0.31 12.0 12.0']}
+                            'quicksurf': ['QuickSurf', '1.05 1.3 0.5 3.0'], 'licorice': ['Licorice', '0.31 12.0 12.0']}
             if style not in style_params.keys():
                 raise RuntimeError('{} is not a valid style; "NewCartoon", "Surf", "QuickSurf" and "Licorice" are '
                                    'available'.format(style))
@@ -201,10 +209,11 @@ def gen_setup(action):
                         cl = avail_schemes[color_key]
                     else:
                         raise RuntimeError('{} is not a valid color description'.format(color_key))
-            sel = hl['selection']
-            setups[lb] += 'mol representation {} {}\nmol color {}\n' \
-                          'mol material $mat{}\nmol selection {{{}}}\n' \
-                          'mol addrep top\n'.format(*style_params[style], cl, lb, sel)
+            if mode in ['u', 'ud']:
+                sel = hl['selection']
+                setups[lb] += 'mol representation {} {}\nmol color {}\n' \
+                              'mol material $mat{}\nmol selection {{{}}}\n' \
+                              'mol addrep top\n'.format(*style_params[style], cl, lb, sel)
     return setups
 
 
@@ -220,15 +229,16 @@ def gen_iterators(action):
     num_precision = 5
     sigmoid, sls, abruptness = check_sigmoid(action.parameters)
     if 'rotate' in action.action_type:
-        angle = action.parameters['angle']
-        check_if_convertible(angle, float, 'smooth')
-        if sigmoid:
-            arr = sigmoid_norm_sum(float(angle), action.framenum, abruptness)
-        elif sls:
-            arr = sigmoid_norm_sum_linear_mid(float(angle), action.framenum, abruptness)
-        else:
-            arr = np.ones(action.framenum) * float(angle)/action.framenum
-        iterators['rot'] = ' '.join([str(round(el, num_precision)) for el in arr])
+        for rkey in action.rots.keys():
+            angle = action.rots[rkey]['angle']
+            check_if_convertible(angle, float, 'smooth')
+            if sigmoid:
+                arr = sigmoid_norm_sum(float(angle), action.framenum, abruptness)
+            elif sls:
+                arr = sigmoid_norm_sum_linear_mid(float(angle), action.framenum, abruptness)
+            else:
+                arr = np.ones(action.framenum) * float(angle)/action.framenum
+            iterators[rkey] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'zoom_in' in action.action_type:
         scale = action.parameters['scale']
         check_if_convertible(scale, float, 'scale')
@@ -269,7 +279,6 @@ def gen_iterators(action):
         hls = [action.highlights[x] for x in action.highlights.keys()]
         hl_labels = list(action.highlights.keys())
         for lb, hl in zip(hl_labels, hls):
-            print(lb, hl)
             try:
                 mode = hl['mode']
             except KeyError:
@@ -299,10 +308,11 @@ def gen_command(action):
     """
     commands = {}
     if 'rotate' in action.action_type:
-        axis = action.parameters['axis']
-        if axis.lower() not in 'xyz':
-            raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given instead".format(axis))
-        commands['rot'] = "set t [lindex $rot $i]\n  rotate {} by $t\n".format(axis.lower())
+        for rkey in action.rots.keys():
+            axis = action.rots[rkey]['axis']
+            if axis.lower() not in 'xyz':
+                raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given instead".format(axis))
+            commands[rkey] = "set t [lindex ${} $i]\n  rotate {} by $t\n".format(rkey, axis.lower())
     if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
         for t_ch in action.transp_changes.keys():
             material = action.transp_changes[t_ch]['material']
@@ -314,9 +324,20 @@ def gen_command(action):
     if 'animate' in action.action_type:
         commands['ani'] = "set t [lindex $ani $i]\n  animate goto $t\n"
     if 'highlight' in action.action_type:
+        hls = [action.highlights[x] for x in action.highlights.keys()]
         hl_labels = list(action.highlights.keys())
-        for lb in hl_labels:
-            commands[lb] = "set t [lindex ${} $i]\n  material change opacity $mat{} $t\n".format(lb, lb)
+        for lb, hl in zip(hl_labels, hls):
+            mode = hl['mode'] if 'mode' in hl.keys() else 'ud'
+            if mode == 'd':
+                try:
+                    ind = hl['highlight_index']
+                except KeyError:
+                    raise RuntimeError('When mode=d, an index_highlight has to be supplied to specify which highlight'
+                                       'has to be turned off')
+                else:
+                    commands[lb] = "set t [lindex ${} $i]\n  material change opacity $mathl{} $t\n".format(lb, ind)
+            else:
+                commands[lb] = "set t [lindex ${} $i]\n  material change opacity $mat{} $t\n".format(lb, lb)
     return commands
 
 

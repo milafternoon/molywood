@@ -53,30 +53,31 @@ directory) as:
 
 ### List of available action keywords and parameters:
 
-+ animate (frames=init_frame:final_frame, t=...s, \[smooth=...\])
-+ rotate (axis=x/y/z, angle=..., t=...s, \[sigmoid=**t**/f/sls\])
-+ zoom_in/zoom_out (scale=..., t=...s, \[sigmoid=**t**/f/sls\])
-+ make_transparent/make_opaque (material=..., t=...s,  \[sigmoid=**t**/f/sls\])
++ animate (frames=init_frame:final_frame t=...s \[smooth=...\])
++ rotate (axis=x/y/z angle=... t=...s \[sigmoid=**t**/f/sls\])
++ zoom_in/zoom_out (scale=... t=...s \[sigmoid=**t**/f/sls\])
++ make_transparent/make_opaque (material=... t=...s  \[sigmoid=**t**/f/sls\])
 + center_view (selection='...')
-+ show_figure (t=...s, \[figure_index=..., datafile=...\])
++ show_figure (t=...s \[figure_index=... datafile=...\])
 + do_nothing (t=...s)
-+ add_overlay (t=...s, \[figure_index=..., datafile=..., origin=0,0
-relative_size=1 frames=init_frame:final_frame\])
-+ add_label(label=..., atom_index=..., \[label_color=...\])
++ add_overlay (t=...s \[figure_index=... datafile=... origin=0,0
+relative_size=1 frames=init_frame:final_frame aspect_ratio=...\])
++ add_label(label=... atom_index=... \[label_color=...
+text_size=...\])
 + remove_label(id=...)
-+ highlight (selection=..., t=..., \[color=..., mode=u/d/ud\,
-style=NewCartoon/Licorice/Surf/QuickSurf])
++ highlight (selection=... t=... \[color=..., mode=u/d/ud
+style=NewCartoon/Licorice/Surf/QuickSurf highlight_index=...\])
 
 (Square brackets denote optional parameters. Values in bold font
 indicate defaults when parameters are optional)
 
 ### List of available global keywords and parameters:
 
-+ global (\[fps=20, draft=t/**f**, keepframes=t/**f**, name=**movie**\])
-+ layout (\[rows=**1**, columns=**1**\])
++ global (\[fps=20  draft=t/**f** keepframes=t/**f** name=**movie**\])
++ layout (\[rows=**1** columns=**1**\])
 + figure (\[files=figure1.png,figure2.png,...\])
-+ scene_identifier (\[visualization=..., structure=..., trajectory=...,
-position=**0,0**, resolution=**1000,1000**\])
++ scene_identifier (\[visualization=... structure=... trajectory=...
+position=**0,0** resolution=**1000,1000**\])
 
 (instead of scene_identifier, you should put the actual identifier
 of the scene in question, e.g. `scene_1` in the example below)

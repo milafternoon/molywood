@@ -242,6 +242,7 @@ class Scene:
         self.trajectory = trajectory
         self.run_vmd = False
         self.total_frames = 0
+        self.counters = {'hl': 0, 'overlay': 0, 'make_transparent': 0, 'make_opaque': 0, 'rot': 0}
     
     def add_action(self, description):
         """
@@ -337,11 +338,11 @@ class Action:
                       'zoom_in': {'scale', 't', 'sigmoid'},
                       'zoom_out': {'scale', 't', 'sigmoid'},
                       'make_transparent': {'material', 't', 'sigmoid'},
-                      'highlight': {'selection', 't', 'color', 'mode', 'style'},
+                      'highlight': {'selection', 't', 'color', 'mode', 'style', 'highlight_index'},
                       'make_opaque': {'material', 't', 'sigmoid'},
                       'center_view': {'selection'},
                       'show_figure': {'figure_index', 't'},
-                      'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames'},
+                      'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames', 'aspect_ratio'},
                       'add_label': {'color', 'atom_index', 'label'},
                       'remove_label': {'id'}
                       }
@@ -353,7 +354,7 @@ class Action:
         self.parameters = {}  # will be a dict of action parameters
         self.initframe = None  # contains the initial frame number in the overall movie's numbering
         self.framenum = None  # total frames count for this action
-        self.highlights, self.transp_changes = {}, {}
+        self.highlights, self.transp_changes, self.rots = {}, {}, {}
         self.parse(description)
     
     def __repr__(self):
@@ -401,9 +402,14 @@ class Action:
             self.parameters['t'] = self.parameters['t'].rstrip('s')
         if not isinstance(self, SimultaneousAction):
             if spl[0] == 'highlight':
-                self.highlights = {'hl1': self.parameters}
+                actions_count = self.scene.counters['hl']
+                self.highlights = {'hl{}'.format(actions_count): self.parameters}
+                self.scene.counters['hl'] += 1
             if spl[0] in ['make_transparent', 'make_opaque']:
                 self.transp_changes = {spl[0]: self.parameters}
+                self.scene.counters[spl[0]] += 1
+            if spl[0] == 'rotate':
+                self.rots = {'rot': self.parameters}
 
     @staticmethod
     def split_input_line(line):
@@ -440,8 +446,8 @@ class SimultaneousAction(Action):
     and rotation)
     """
     def __init__(self, scene, description):
-        self.overlays = {}  # need special treatment for overlays as there can be many ('overlay1', 'overlay2', ...)
-        self.highlights = {}  # the same goes for highlights ('hl1', 'hl2', ...)
+        self.overlays = {}  # need special treatment for overlays as there can be many ('overlay0', 'overlay1', ...)
+        self.highlights = {}  # the same goes for highlights ('hl0', 'hl1', ...)
         self.transp_changes = {}  # ...and for make_opaque/make_transparent
         super().__init__(scene, description)
         
@@ -465,14 +471,17 @@ class SimultaneousAction(Action):
                 self.parse_many(action, self.highlights, 'hl')
             elif action.split()[0] in ['make_transparent', 'make_opaque']:
                 self.parse_many(action, self.transp_changes, action.split()[0])
+            elif action.split()[0] == 'rotate':
+                self.parse_many(action, self.rots, 'rot')
             super().parse(action)
         self.action_type = [action.split()[0] for action in actions]
         if 'zoom_in' in self.action_type and 'zoom_out' in self.action_type:
             raise RuntimeError("actions {} are mutually exclusive".format(", ".join(self.action_type)))
     
     def parse_many(self, directive, actions_dict, keyword):
-        actions_count = len(list(actions_dict.keys()))
-        ind = str(actions_count + 1)
+        actions_count = self.scene.counters[keyword]
+        self.scene.counters[keyword] += 1
+        ind = str(actions_count)
         spl = self.split_input_line(directive)
         actions_dict[keyword + ind] = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}
     
