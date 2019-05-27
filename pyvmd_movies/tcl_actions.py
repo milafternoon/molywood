@@ -35,7 +35,7 @@ def sigmoid_norm_prod(cumprod, n_points, abruptness=1):
     :param abruptness: float, how fast the transition is
     :return: numpy.array, array of increments
     """
-    increments = 1 + sigmoid_increments(n_points, abruptness)
+    increments = np.array(1) + sigmoid_increments(n_points, abruptness)
     prod = np.prod(increments)
     exponent = np.log(cumprod)/np.log(prod)
     return increments**exponent
@@ -171,7 +171,7 @@ def gen_setup(action):
         hls = [action.highlights[x] for x in action.highlights.keys()]
         hl_labels = list(action.highlights.keys())
         for lb, hl in zip(hl_labels, hls):
-            setups[lb] = ''  # TODO enable coloring by type/name/element
+            setups[lb] = ''
             setups[lb] += 'material add copy Opaque\nset mat{} [lindex [material list] end]\n' \
                           'material change opacity $mat{} 0\n'.format(lb, lb)
             try:
@@ -188,14 +188,21 @@ def gen_setup(action):
                 raise RuntimeError('{} is not a valid style; "NewCartoon", "Surf", "QuickSurf" and "Licorice" are '
                                    'available'.format(style))
             if color_key in colors.keys():
-                cl = colors[color_key]
+                cl = 'ColorID {}'.format(colors[color_key])
             else:
                 try:
-                    cl = int(color_key)
+                    cl = 'ColorID {}'.format(int(color_key))
                 except ValueError:
-                    raise RuntimeError('{} is not a valid color description'.format(color_key))
+                    avail_schemes = {"name": "Name", "type": "Type", "resname": "ResName", "restype": "ResType",
+                                     "resid": "ResID", "element": "Element", "molecule": "Molecule",
+                                     "structure": "Structure", "chain": "Chain", "beta": "Beta",
+                                     "occupancy": "Occupancy", "mass": "Mass", "charge": "Charge", "pos": "Pos"}
+                    if color_key.lower() in avail_schemes.keys():
+                        cl = avail_schemes[color_key]
+                    else:
+                        raise RuntimeError('{} is not a valid color description'.format(color_key))
             sel = hl['selection']
-            setups[lb] += 'mol representation {} {}\nmol color ColorID {}\n' \
+            setups[lb] += 'mol representation {} {}\nmol color {}\n' \
                           'mol material $mat{}\nmol selection {{{}}}\n' \
                           'mol addrep top\n'.format(*style_params[style], cl, lb, sel)
     return setups
@@ -269,7 +276,7 @@ def gen_iterators(action):
                 mode = 'ud'
             if mode == 'u':
                 arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
-            elif mode == 'd':
+            elif mode == 'd':  # TODO how do we actually turn off a previously defined highlight?
                 arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))[::-1]
             elif mode == 'ud':
                 margin = int(0.25 * action.framenum)

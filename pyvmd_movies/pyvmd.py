@@ -308,7 +308,8 @@ class Scene:
                 code += 'render options Tachyon "/usr/local/lib/vmd/tachyon_LINUXAMD64" -aasamples 12 %s -format ' \
                         'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
             else:
-                code += 'display resize {}'.format(' '.join(str(x) for x in self.resolution))
+                code += 'for {{set i 0}} {{$i < 5}} {{incr i}} ' \
+                        '{{ display resize {}}}\n'.format(' '.join(str(x) for x in self.resolution))
             action_code = ''
             for ac in self.actions:
                 action_code += ac.generate()
@@ -326,7 +327,7 @@ class Action:
     Intended to represent a single action in
     a movie, e.g. a rotation, change of material
     or zoom-in
-    """  # TODO add change_property?
+    """
     allowed_actions = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent', 'highlight',
                        'make_opaque', 'center_view', 'show_figure', 'add_overlay', 'add_label', 'remove_label']
     
@@ -336,7 +337,7 @@ class Action:
                       'zoom_in': {'scale', 't', 'sigmoid'},
                       'zoom_out': {'scale', 't', 'sigmoid'},
                       'make_transparent': {'material', 't', 'sigmoid'},
-                      'highlight': {'selection', 't', 'color', 'mode'},
+                      'highlight': {'selection', 't', 'color', 'mode', 'style'},
                       'make_opaque': {'material', 't', 'sigmoid'},
                       'center_view': {'selection'},
                       'show_figure': {'figure_index', 't'},
@@ -352,6 +353,7 @@ class Action:
         self.parameters = {}  # will be a dict of action parameters
         self.initframe = None  # contains the initial frame number in the overall movie's numbering
         self.framenum = None  # total frames count for this action
+        self.highlights, self.transp_changes = {}, {}
         self.parse(description)
     
     def __repr__(self):
