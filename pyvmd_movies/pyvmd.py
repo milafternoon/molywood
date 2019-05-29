@@ -242,6 +242,7 @@ class Scene:
         self.trajectory = trajectory
         self.run_vmd = False
         self.total_frames = 0
+        self.tachyon = None
         self.counters = {'hl': 0, 'overlay': 0, 'make_transparent': 0, 'make_opaque': 0, 'rot': 0}
     
     def add_action(self, description):
@@ -308,14 +309,14 @@ class Scene:
             if not self.script.draft:
                 if sys.platform.startswith('linux'):
                     vmd_path = '/'.join(str(os.popen('which vmd').read().strip()).split('/')[:-2])
-                    tachyon_path = os.popen('ls {}/lib/vmd/tachyon*'.format(vmd_path)).read().strip()
+                    self.tachyon = os.popen('ls {}/lib/vmd/tachyon*'.format(vmd_path)).read().strip()
                 elif sys.platform == 'darwin' or sys.platform.startswith('os'):
                     tachyon_path = ''  # TODO test on OSX; enable user-specified
                 else:
                     raise RuntimeError("{} is currently not supported, please switch to a linux- or OSX-compatible"
                                        "environment".format(sys.platform))
                 code += 'render options Tachyon "{}" -aasamples 12 %s -format ' \
-                        'TARGA -o %s.tga -res {} {}\n'.format(tachyon_path, *self.resolution)
+                        'TARGA -o %s.tga -res {} {}\n'.format(self.tachyon, *self.resolution)
             else:
                 code += 'for {{set i 0}} {{$i < 3}} {{incr i}} ' \
                         '{{ display resize {}}}\nwait 1\n'.format(' '.join(str(x) for x in self.resolution))

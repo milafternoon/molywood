@@ -56,7 +56,7 @@ def sigmoid_norm_sum_linear_mid(cumsum, n_points, abruptness=1, fraction_linear=
     :return: numpy.array, array of increments
     """
     n_points_sigm = int(n_points * (1-fraction_linear))
-    n_points_linear = n_points - n_points_sigm  # TODO try to get all dependencies installed via conda
+    n_points_linear = n_points - n_points_sigm  # TODO try to get all dependencies installed via conda]
     increments = sigmoid_increments(n_points_sigm, abruptness)
     midpoint = len(increments)//2
     midpoint_increment = increments[midpoint]
@@ -116,9 +116,10 @@ def gen_loop(action):
         if action.scene.script.draft:
             code += '  render snapshot {sc}-$fr.tga\n  incr fr\n}}'.format(sc=action.scene.name)
         else:
-            code += '  render Tachyon {sc}-$fr.dat\n  "/usr/local/lib/vmd/tachyon_LINUXAMD64" ' \
+            code += '  render Tachyon {sc}-$fr.dat\n  "{tc}" ' \
                     '-aasamples 12 {sc}-$fr.dat -format TARGA -o {sc}-$fr.tga -res {rs}' \
-                    '\n  incr fr\n}}'.format(sc=action.scene.name, rs=' '.join(str(x) for x in action.scene.resolution))
+                    '\n  incr fr\n}}'.format(sc=action.scene.name, rs=' '.join(str(x) for x in action.scene.resolution),
+                                             tc=action.scene.tachyon)
     return code
 
 
