@@ -311,7 +311,7 @@ class Scene:
                     vmd_path = '/'.join(str(os.popen('which vmd').read().strip()).split('/')[:-2])
                     self.tachyon = os.popen('ls {}/lib/vmd/tachyon*'.format(vmd_path)).read().strip()
                 elif sys.platform == 'darwin' or sys.platform.startswith('os'):
-                    tachyon_path = ''  # TODO test on OSX; enable user-specified
+                    self.tachyon = ''  # TODO test on OSX; enable user-specified
                 else:
                     raise RuntimeError("{} is currently not supported, please switch to a linux- or OSX-compatible"
                                        "environment".format(sys.platform))
@@ -342,7 +342,7 @@ class Action:
                        'make_opaque', 'center_view', 'show_figure', 'add_overlay', 'add_label', 'remove_label']
     
     allowed_params = {'do_nothing': {'t'},
-                      'animate': {'frames', 'smooth', 't', 'sigmoid'},
+                      'animate': {'frames', 'smooth', 't'},
                       'rotate': {'angle', 'axis', 't', 'sigmoid'},
                       'zoom_in': {'scale', 't', 'sigmoid'},
                       'zoom_out': {'scale', 't', 'sigmoid'},
@@ -350,9 +350,10 @@ class Action:
                       'highlight': {'selection', 't', 'color', 'mode', 'style', 'highlight_index'},
                       'make_opaque': {'material', 't', 'sigmoid'},
                       'center_view': {'selection'},
-                      'show_figure': {'figure_index', 't'},
-                      'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames', 'aspect_ratio', 'datafile'},
-                      'add_label': {'color', 'atom_index', 'label'},
+                      'show_figure': {'figure_index', 't', 'datafile'},
+                      'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames',
+                                      'aspect_ratio', 'datafile'},
+                      'add_label': {'label_color', 'atom_index', 'label', 'text_size'},
                       'remove_label': {'id'}
                       }
     

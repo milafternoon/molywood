@@ -154,7 +154,7 @@ def gen_setup(action):
                             'mol smoothrep $mtop $i {}\n}}\n'.format(smooth)
     if 'add_label' in action.action_type:
         try:
-            label_color = action.parameters['color']
+            label_color = action.parameters['label_color']
         except KeyError:
             label_color = 'black'
         try:
