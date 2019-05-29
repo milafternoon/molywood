@@ -1,0 +1,10 @@
+name: pyvmd
+channels:
+  - conda-forge
+  - menpo
+dependencies:
+  - vmd
+  - imagemagick
+  - ffmpeg
+  - matplotlib
+  - numpy

@@ -56,7 +56,7 @@ def sigmoid_norm_sum_linear_mid(cumsum, n_points, abruptness=1, fraction_linear=
     :return: numpy.array, array of increments
     """
     n_points_sigm = int(n_points * (1-fraction_linear))
-    n_points_linear = n_points - n_points_sigm
+    n_points_linear = n_points - n_points_sigm  # TODO try to get all dependencies installed via conda
     increments = sigmoid_increments(n_points_sigm, abruptness)
     midpoint = len(increments)//2
     midpoint_increment = increments[midpoint]

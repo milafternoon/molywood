@@ -310,7 +310,7 @@ class Scene:
                     vmd_path = '/'.join(str(os.popen('which vmd').read().strip()).split('/')[:-2])
                     tachyon_path = os.popen('ls {}/lib/vmd/tachyon*'.format(vmd_path)).read().strip()
                 elif sys.platform == 'darwin' or sys.platform.startswith('os'):
-                    tachyon_path = ''  # TODO test on OSX
+                    tachyon_path = ''  # TODO test on OSX; enable user-specified
                 else:
                     raise RuntimeError("{} is currently not supported, please switch to a linux- or OSX-compatible"
                                        "environment".format(sys.platform))
@@ -350,7 +350,7 @@ class Action:
                       'make_opaque': {'material', 't', 'sigmoid'},
                       'center_view': {'selection'},
                       'show_figure': {'figure_index', 't'},
-                      'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames', 'aspect_ratio'},
+                      'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames', 'aspect_ratio', 'datafile'},
                       'add_label': {'color', 'atom_index', 'label'},
                       'remove_label': {'id'}
                       }

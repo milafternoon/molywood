@@ -1,4 +1,4 @@
-$ global          fps=10  draft=false  keepframes=false
+$ global          fps=10  draft=t  keepframes=false
 $ layout          rows=1  columns=1
 $ scene_1         visualization=vis.vmd  position=0,0 resolution=500,500
 
