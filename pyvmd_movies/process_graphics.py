@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 
 def postprocessor(script):
@@ -132,13 +133,29 @@ def compose_overlay(action):
     frames = range(action.initframe, action.initframe + action.framenum)
     scene = action.scene.name
     res = action.scene.resolution
+    try:
+        sigmoid = action.parameters['sigmoid']
+    except KeyError:
+        sigmoid = True
+    else:
+        sigmoid = True if sigmoid.lower() in ['true', 't', 'y', 'yes'] else False
+    if sigmoid:
+        sgm_frames = int(0.2*action.framenum)
+        x = np.linspace(-5, 5, sgm_frames)
+        sgm = 1/(1+np.exp(-x))
+        opacity = np.concatenate((sgm, np.ones(action.framenum - 2 * sgm_frames), sgm[::-1]))
+    else:
+        opacity = np.ones(action.framenum)
     for ovl in action.overlays.keys():
         origin_frac = [float(x) for x in action.overlays[ovl]['origin'].split(',')]
         origin_px = [int(r*o) for r, o in zip(res, origin_frac)]
-        for fr in frames:
+        for fr, opa in zip(frames, opacity):
             print('composing frame {}'.format(fr))
             fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
             target_fig = '{}-{}.png'.format(scene, fr)
+            if opa != 1:
+                os.system('convert {} -alpha on -channel a -evaluate set {}% +channel {}'.format(fig_file,
+                                                                                                 opa, fig_file))
             os.system('composite -gravity SouthWest -compose atop -geometry +{}+{} {} {} {}'.format(*origin_px,
                                                                                                     fig_file,
                                                                                                     target_fig,
@@ -157,7 +174,6 @@ def data_simple_plot(action, datafile, basename):
     :return: None
     """
     import matplotlib.pyplot as plt
-    import numpy as np
     font = {'size': 22}
     plt.rc('font', **font)
     plt.rc('axes', linewidth=2)
