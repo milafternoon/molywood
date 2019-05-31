@@ -46,7 +46,7 @@ class Script:
                 with open('script_{}.tcl'.format(scene.name), 'w') as out:
                     out.write(tcl_script)
                 ddev = '-dispdev none' if not self.draft else ''
-                os.system('vmd {} -e script_{}.tcl'.format(ddev, scene.name))
+                os.system('vmd {} -e script_{}.tcl -startup ""'.format(ddev, scene.name))
                 os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); '
                           'rm $i; done'.format(scene.name))
                 if not self.draft:
@@ -318,8 +318,7 @@ class Scene:
                 code += 'render options Tachyon "{}" -aasamples 12 %s -format ' \
                         'TARGA -o %s.tga -res {} {}\n'.format(self.tachyon, *self.resolution)
             else:
-                code += 'for {{set i 0}} {{$i < 3}} {{incr i}} ' \
-                        '{{ display resize {}}}\nwait 1\n'.format(' '.join(str(x) for x in self.resolution))
+                code += 'display resize {}\n'.format(' '.join(str(x) for x in self.resolution))
             action_code = ''
             for ac in self.actions:
                 action_code += ac.generate()
@@ -339,7 +338,8 @@ class Action:
     or zoom-in
     """
     allowed_actions = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent', 'highlight',
-                       'make_opaque', 'center_view', 'show_figure', 'add_overlay', 'add_label', 'remove_label']
+                       'make_opaque', 'center_view', 'show_figure', 'add_overlay', 'add_label', 'remove_label',
+                       'fit_trajectory']
     
     allowed_params = {'do_nothing': {'t'},
                       'animate': {'frames', 'smooth', 't'},
@@ -354,7 +354,8 @@ class Action:
                       'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames',
                                       'aspect_ratio', 'datafile'},
                       'add_label': {'label_color', 'atom_index', 'label', 'text_size'},
-                      'remove_label': {'id'}
+                      'remove_label': {'id'},
+                      'fit_trajectory': {'selection'}
                       }
     
     def __init__(self, scene, description):
@@ -377,7 +378,8 @@ class Action:
         :return: str, TCL code
         """
         actions_requiring_tcl = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
-                                 'make_opaque', 'center_view', 'add_label', 'remove_label', 'highlight']
+                                 'make_opaque', 'center_view', 'add_label', 'remove_label', 'highlight',
+                                 'fit_trajectory']
         actions_requiring_genfig = ['show_figure', 'add_overlay']
         if set(self.action_type).intersection(set(actions_requiring_genfig)):
             process_graphics.gen_fig(self)
@@ -483,6 +485,9 @@ class SimultaneousAction(Action):
                 self.parse_many(action, self.transp_changes, action.split()[0])
             elif action.split()[0] == 'rotate':
                 self.parse_many(action, self.rots, 'rot')
+            elif action.split()[0] in ['fit_trajectory', 'center_view', 'add_label', 'remove_label']:
+                raise RuntimeError("{} is an instantaneous action (i.e. doesn't last over finite time interval) and "
+                                   "cannot be combined with others".format(action.split()[0]))
             super().parse(action)
         self.action_type = [action.split()[0] for action in actions]
         if 'zoom_in' in self.action_type and 'zoom_out' in self.action_type:

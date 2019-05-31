@@ -73,11 +73,12 @@ the explanations below).
 + do_nothing (t=...s)
 + add_overlay (t=...s \[figure_index=... datafile=... origin=0,0
 relative_size=1 frames=init_frame:final_frame aspect_ratio=...\])
-+ add_label(label=... atom_index=... \[label_color=...
++ add_label (label=... atom_index=... \[label_color=...
 text_size=...\])
 + remove_label(id=...)
 + highlight (selection=... t=... \[color=... mode=u/d/ud
 style=NewCartoon/Licorice/Surf/QuickSurf highlight_index=...\])
++ fit_trajectory (selection=...)
 
 (Square brackets denote optional parameters. Values in bold font
 indicate defaults when parameters are optional)
@@ -197,3 +198,6 @@ which zoom will converge; useful when zooming onto e.g. a reaction center
     `highlight_index` specifying the (0-based) index of the highlight
     to be turned off; highlights are indexed by counting all `highlight`
     keywords in the input, consecutively.
+ + `fit_trajectory` uses RMSD-based fitting to instantaneously align a
+ trajectory to the reference (first) frame, using the `selection` to
+ calculate the optimal alignment
