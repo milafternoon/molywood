@@ -75,6 +75,8 @@ the explanations below).
 relative_size=1 frames=init_frame:final_frame aspect_ratio=...\])
 + add_label (label=... atom_index=... \[label_color=...
 text_size=...\])
++ add_distance (selection1=... selection2=... \[label_color=...
+text_size=...\])
 + remove_label(id=...)
 + highlight (selection=... t=... \[color=... mode=u/d/ud
 style=NewCartoon/Licorice/Surf/QuickSurf highlight_index=...\])
@@ -178,6 +180,10 @@ which zoom will converge; useful when zooming onto e.g. a reaction center
  specified with `atom_index`, with the labeling text specified through
  the `label` parameter; if desired, text size  and color can be
  specified with `label_color` and `text_size`.
+ + `add_distance` instantaneously adds a distance label between
+ the centers of geometry of two selections, specified with `selection1`
+ and `selection2`; as above, text size  and color can be specified with
+ `label_color` and `text_size`.
  + `remove_label` instantaneously deletes a label specified through
  `id`, with the 0-based ID being related to the number of currently
  displayed labels (if e.g. 3 labels were added previously, possible IDs

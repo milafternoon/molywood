@@ -56,7 +56,7 @@ def sigmoid_norm_sum_linear_mid(cumsum, n_points, abruptness=1, fraction_linear=
     :return: numpy.array, array of increments
     """
     n_points_sigm = int(n_points * (1-fraction_linear))
-    n_points_linear = n_points - n_points_sigm  # TODO try to get all dependencies installed via conda]
+    n_points_linear = n_points - n_points_sigm
     increments = sigmoid_increments(n_points_sigm, abruptness)
     midpoint = len(increments)//2
     midpoint_increment = increments[midpoint]
@@ -116,7 +116,7 @@ def gen_loop(action):
         if action.scene.script.draft:
             code += '  render snapshot {sc}-$fr.tga\n  incr fr\n}}'.format(sc=action.scene.name)
         else:
-            code += '  render Tachyon {sc}-$fr.dat\n  "{tc}" ' \
+            code += '  render Tachyon {sc}-$fr.dat\n  \"$env(TACHYON_BIN)\" ' \
                     '-aasamples 12 {sc}-$fr.dat -format TARGA -o {sc}-$fr.tga -res {rs}' \
                     '\n  incr fr\n}}'.format(sc=action.scene.name, rs=' '.join(str(x) for x in action.scene.resolution),
                                              tc=action.scene.tachyon)
@@ -173,6 +173,35 @@ def gen_setup(action):
         lab_id = action.parameters['id']
         check_if_convertible(lab_id, int, 'id')
         setups['rml'] = 'label delete Atoms {}'.format(lab_id)
+    if 'add_distance' in action.action_type:
+        try:
+            label_color = action.parameters['label_color']
+        except KeyError:
+            label_color = 'black'
+        try:
+            tsize = action.parameters['text_size']
+        except KeyError:
+            tsize = 1.0
+        else:
+            check_if_convertible(tsize, float, 'text_size')
+        sel1 = action.parameters['selection1']
+        sel2 = action.parameters['selection2']
+        setups['add'] = 'proc geom_center {{selection}} {{\n    set gc [veczero]\n' \
+                        '    foreach coord [$selection get {{x y z}}] {{\n       set gc [vecadd $gc $coord]}}\n    ' \
+                        'return [vecscale [expr 1.0 /[$selection num]] $gc]}}\n\n'.format()
+        setups['add'] += 'set newmol [mol new atoms 2]\nmol representation Lines\nmol selection all\n' \
+                         'mol addrep $newmol\nlabel add Bonds 1/0 1/1\ncolor Labels Bonds {}\n' \
+                         'label textsize {}\nlabel textthickness 3\nmol top 0\n\n'.format(label_color, tsize)
+        setups['add'] += 'proc reposition_dummies {{newmol}} {{  animate dup $newmol\n' \
+                         '  set sel [atomselect $newmol "index 0"]\n  set ssel [atomselect 0 "{}"]\n' \
+                         '  $sel set {{x y z}} [list [geom_center $ssel]]\n  set ssel [atomselect 0 "{}"]\n' \
+                         '  set sel [atomselect $newmol "index 1"]\n  $sel set {{x y z}} [list [geom_center $ssel]]\n' \
+                         '}}\n\nreposition_dummies $newmol\n\n'.format(sel1, sel2)
+        if action.scene.visualization:
+            setups['add'] += 'display resetview\nmolinfo 0 set {center_matrix rotate_matrix scale_matrix ' \
+                             'global_matrix} $viewpoints(0)\nmolinfo $newmol set {center_matrix rotate_matrix ' \
+                             'scale_matrix global_matrix} $viewpoints(0)\n\n'
+        action.scene.counters['dist_labels'] += 1
     if 'highlight' in action.action_type:
         colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
         hls = [action.highlights[x] for x in action.highlights.keys()]
@@ -280,8 +309,8 @@ def gen_iterators(action):
             iterators[t_ch] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'animate' in action.action_type:
         animation_frames = [x for x in action.parameters['frames'].split(':')]
-        for val in animation_frames:  # TODO add optn to temporarily backup .vmdrc if it screws up
-            check_if_convertible(val, int, 'frames')  # TODO write fn to calc COG, then pair with distance labeling
+        for val in animation_frames:
+            check_if_convertible(val, int, 'frames')
         arr = np.linspace(int(animation_frames[0]), int(animation_frames[1]), action.framenum).astype(int)
         iterators['ani'] = ' '.join([str(int(el)) for el in arr])
     if 'highlight' in action.action_type:
@@ -331,7 +360,10 @@ def gen_command(action):
     elif 'zoom_out' in action.action_type:
         commands['zou'] = "set t [lindex $zou $i]\n  scale by $t\n"
     if 'animate' in action.action_type:
-        commands['ani'] = "set t [lindex $ani $i]\n  animate goto $t\n"
+        commands['ani'] = ''
+        if action.scene.counters['dist_labels'] > 0:
+            commands['ani'] += 'reposition_dummies $newmol\n'
+        commands['ani'] += "set t [lindex $ani $i]\n  animate goto $t\n"
     if 'highlight' in action.action_type:
         hls = [action.highlights[x] for x in action.highlights.keys()]
         hl_labels = list(action.highlights.keys())
@@ -354,7 +386,7 @@ def check_if_convertible(string, object_type, param_name):
     try:
         _ = object_type(string)
     except ValueError:
-        raise RuntimeError("'{}' must be {}, {} was given instead".format(param_name, object_type, string))
+        raise RuntimeError("'{}' must be {}, instead '{}' was given".format(param_name, object_type, string))
 
 
 def check_sigmoid(params_dict):

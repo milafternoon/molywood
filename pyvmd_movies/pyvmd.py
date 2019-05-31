@@ -243,7 +243,7 @@ class Scene:
         self.run_vmd = False
         self.total_frames = 0
         self.tachyon = None
-        self.counters = {'hl': 0, 'overlay': 0, 'make_transparent': 0, 'make_opaque': 0, 'rot': 0}
+        self.counters = {'hl': 0, 'overlay': 0, 'make_transparent': 0, 'make_opaque': 0, 'rot': 0, 'dist_labels': 0}
     
     def add_action(self, description):
         """
@@ -295,7 +295,7 @@ class Scene:
         if self.visualization or self.structure:
             self.run_vmd = True
             if self.visualization:
-                code = open(self.visualization, 'r').readlines()
+                code = [line for line in open(self.visualization, 'r').readlines() if not line.startswith('#')]
                 code = ''.join(code)
             else:
                 code = 'mol new {} type {} first 0 last -1 step 1 filebonds 1 ' \
@@ -307,18 +307,27 @@ class Scene:
                         'mol color Structure\nmol selection {all}\nmol material Opaque\nmol addrep top\n'
             code += 'axes location off\n'
             if not self.script.draft:
-                if sys.platform.startswith('linux'):
-                    vmd_path = '/'.join(str(os.popen('which vmd').read().strip()).split('/')[:-2])
-                    self.tachyon = os.popen('ls {}/lib/vmd/tachyon*'.format(vmd_path)).read().strip()
-                elif sys.platform == 'darwin' or sys.platform.startswith('os'):
-                    self.tachyon = ''  # TODO test on OSX; enable user-specified
+                vmd_path = str(os.popen('which vmd').read().strip())
+                if vmd_path:
+                    if sys.platform.startswith('linux'):
+                        vmd_path = '/'.join(vmd_path.split('/')[:-2])
+                        self.tachyon = os.popen('ls {}/lib/vmd/tachyon*'.format(vmd_path)).read().strip()
+                    elif sys.platform == 'darwin' or sys.platform.startswith('os'):
+                        vmd_path = '/'.join(vmd_path.split('/')[:-1])
+                        self.tachyon = os.popen('ls {}/tachyon*'.format(vmd_path)).read().strip()
                 else:
-                    raise RuntimeError("{} is currently not supported, please switch to a linux- or OSX-compatible"
-                                       "environment".format(sys.platform))
-                code += 'render options Tachyon "{}" -aasamples 12 %s -format ' \
-                        'TARGA -o %s.tga -res {} {}\n'.format(self.tachyon, *self.resolution)
+                    try:
+                        self.tachyon = self.script.directives['global']['vmd_path']
+                    except KeyError:
+                        raise RuntimeError('VMD could not be found; please make sure it is installed and either'
+                                           '(a) add it to your $PATH variable or (b) add "vmd_path"=...'
+                                           'to your input file for pyvmd; note that you might need to switch'
+                                           'to a Unix-compatible OS')
+                code += 'render options Tachyon \"$env(TACHYON_BIN)\" -aasamples 12 %s -format ' \
+                        'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
             else:
-                code += 'display resize {}\n'.format(' '.join(str(x) for x in self.resolution))
+                code += 'display resize {res}\nsleep 1\n' \
+                        'display resize {res}'.format(res=' '.join(str(x) for x in self.resolution))
             action_code = ''
             for ac in self.actions:
                 action_code += ac.generate()
@@ -339,7 +348,7 @@ class Action:
     """
     allowed_actions = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent', 'highlight',
                        'make_opaque', 'center_view', 'show_figure', 'add_overlay', 'add_label', 'remove_label',
-                       'fit_trajectory']
+                       'fit_trajectory', 'add_distance', 'remove_distance']
     
     allowed_params = {'do_nothing': {'t'},
                       'animate': {'frames', 'smooth', 't'},
@@ -354,7 +363,9 @@ class Action:
                       'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames',
                                       'aspect_ratio', 'datafile'},
                       'add_label': {'label_color', 'atom_index', 'label', 'text_size'},
-                      'remove_label': {'id'},
+                      'remove_label': {'id'},  # TODO switch to user-defined aliases
+                      'add_distance': {'selection1', 'selection2', 'label_color', 'text_size'},
+                      'remove_distance': {'id'},
                       'fit_trajectory': {'selection'}
                       }
     
@@ -379,7 +390,7 @@ class Action:
         """
         actions_requiring_tcl = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
                                  'make_opaque', 'center_view', 'add_label', 'remove_label', 'highlight',
-                                 'fit_trajectory']
+                                 'fit_trajectory', 'add_distance', 'remove_distance']
         actions_requiring_genfig = ['show_figure', 'add_overlay']
         if set(self.action_type).intersection(set(actions_requiring_genfig)):
             process_graphics.gen_fig(self)
