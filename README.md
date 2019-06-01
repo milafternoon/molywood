@@ -64,26 +64,35 @@ the explanations below).
 
 ### List of available action keywords and parameters:
 
+###### Instantaneous actions:
+
++ center_view (selection='...')
++ fit_trajectory (selection='...')
++ add_label (label='...' atom_index=... \[label_color=...
+text_size=... alias=...\])
++ add_distance (selection1='...' selection2='...' \[label_color=...
+text_size=... alias=...\])
++ remove_label (\[alias=... remove_all=**n**\])
++ remove_distance (\[alias=... remove_all=**n**\])
+
+###### Finite-time actions
+
 + animate (frames=init_frame:final_frame t=...s \[smooth=...\])
 + rotate (axis=x/y/z angle=... t=...s \[sigmoid=**t**/f/sls\])
 + zoom_in/zoom_out (scale=... t=...s \[sigmoid=**t**/f/sls\])
 + make_transparent/make_opaque (material=... t=...s  \[sigmoid=**t**/f/sls\])
-+ center_view (selection='...')
 + show_figure (t=...s \[figure_index=... datafile=...\])
 + do_nothing (t=...s)
 + add_overlay (t=...s \[figure_index=... datafile=... origin=0,0
 relative_size=1 frames=init_frame:final_frame aspect_ratio=...\])
-+ add_label (label=... atom_index=... \[label_color=...
-text_size=...\])
-+ add_distance (selection1=... selection2=... \[label_color=...
-text_size=...\])
-+ remove_label(id=...)
-+ highlight (selection=... t=... \[color=... mode=u/d/ud
-style=NewCartoon/Licorice/Surf/QuickSurf highlight_index=...\])
-+ fit_trajectory (selection=...)
++ highlight (selection=... t=... \[color=**black** mode=u/d/ud
+style=**newcartoon**/licorice/surf/quicksurf alias=...\])
 
-(Square brackets denote optional parameters. Values in bold font
-indicate defaults when parameters are optional)
+
+(Note that **only** finite-time actions can be combined using curly
+brackets. Also, all finite-time require the t=...s keyword. Above,
+square brackets denote optional parameters. Values in bold font
+indicate defaults when parameters are optional.)
 
 ### List of available global keywords and parameters:
 

@@ -95,7 +95,8 @@ def gen_fig(action):
             if 'figure_index' in list(action.overlays[ovl].keys()):
                 fig_file = action.scene.script.figures[int(action.overlays[ovl]['figure_index'])]
                 for fr in frames:
-                    os.system('convert {} -resize {}x{} {}-{}-{}.png'.format(fig_file, *overlay_res, scene, ovl, fr))
+                    ovl_file = '{}-{}-{}.png'.format(ovl, scene, fr)
+                    os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, ovl_file))
             elif 'datafile' in list(action.overlays[ovl].keys()):
                 df = action.overlays[ovl]['datafile']
                 data_simple_plot(action, df, ovl)
@@ -147,15 +148,19 @@ def compose_overlay(action):
     else:
         opacity = np.ones(action.framenum)
     for ovl in action.overlays.keys():
-        origin_frac = [float(x) for x in action.overlays[ovl]['origin'].split(',')]
+        try:
+            origin_frac = [float(x) for x in action.overlays[ovl]['origin'].split(',')]
+        except KeyError:
+            origin_frac = [0, 0]
         origin_px = [int(r*o) for r, o in zip(res, origin_frac)]
         for fr, opa in zip(frames, opacity):
             print('composing frame {}'.format(fr))
             fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
             target_fig = '{}-{}.png'.format(scene, fr)
             if opa != 1:
-                os.system('convert {} -alpha on -channel a -evaluate set {}% +channel {}'.format(fig_file,
-                                                                                                 opa, fig_file))
+                os.system('convert {} -alpha set -channel a -evaluate multiply {} +channel {}'.format(fig_file,
+                                                                                                      opa,
+                                                                                                      fig_file))
             os.system('composite -gravity SouthWest -compose atop -geometry +{}+{} {} {} {}'.format(*origin_px,
                                                                                                     fig_file,
                                                                                                     target_fig,

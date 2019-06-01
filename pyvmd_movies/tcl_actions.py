@@ -244,14 +244,14 @@ def gen_setup(action):
                 setups[lb] += 'mol representation {} {}\nmol color {}\n' \
                               'mol material $mat{}\nmol selection {{{}}}\n' \
                               'mol addrep top\n'.format(*style_params[style], cl, lb, sel)
-        if 'fit_trajectory' in action.action_type:
-            sel = action.parameters['selection']
-            setups['fit'] = 'set fit_reference [atomselect top "{}" frame 0]\nset fit_compare [atomselect top "{}"]\n' \
-                            'set fit_system [atomselect top "all"]\nset num_steps [molinfo top get numframes]\n' \
-                            'for {{set frame 0}} {{$frame < $num_steps}} {{incr frame}} {{\n' \
-                            '    $fit_compare frame $frame\n    $fit_system frame $frame\n' \
-                            '    set fit_matrix [measure fit $fit_compare $fit_reference]\n' \
-                            '    $fit_system move $fit_matrix }}\n\n'.format(sel, sel)
+    if 'fit_trajectory' in action.action_type:
+        sel = action.parameters['selection']
+        setups['fit'] = 'set fit_reference [atomselect top "{}" frame 0]\nset fit_compare [atomselect top "{}"]\n' \
+                        'set fit_system [atomselect top "all"]\nset num_steps [molinfo top get numframes]\n' \
+                        'for {{set frame 0}} {{$frame < $num_steps}} {{incr frame}} {{\n' \
+                        '    $fit_compare frame $frame\n    $fit_system frame $frame\n' \
+                        '    set fit_matrix [measure fit $fit_compare $fit_reference]\n' \
+                        '    $fit_system move $fit_matrix }}\n\n'.format(sel, sel)
     return setups
 
 

@@ -356,16 +356,16 @@ class Action:
                       'zoom_in': {'scale', 't', 'sigmoid'},
                       'zoom_out': {'scale', 't', 'sigmoid'},
                       'make_transparent': {'material', 't', 'sigmoid'},
-                      'highlight': {'selection', 't', 'color', 'mode', 'style', 'highlight_index'},
+                      'highlight': {'selection', 't', 'color', 'mode', 'style', 'alias'},
                       'make_opaque': {'material', 't', 'sigmoid'},
                       'center_view': {'selection'},
                       'show_figure': {'figure_index', 't', 'datafile'},
                       'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames',
                                       'aspect_ratio', 'datafile'},
                       'add_label': {'label_color', 'atom_index', 'label', 'text_size'},
-                      'remove_label': {'id'},  # TODO switch to user-defined aliases
-                      'add_distance': {'selection1', 'selection2', 'label_color', 'text_size'},
-                      'remove_distance': {'id'},
+                      'remove_label': {'alias'},  # TODO switch to user-defined aliases
+                      'add_distance': {'selection1', 'selection2', 'label_color', 'text_size', 'alias'},
+                      'remove_distance': {'alias'},
                       'fit_trajectory': {'selection'}
                       }
     
