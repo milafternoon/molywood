@@ -174,7 +174,7 @@ def gen_setup(action):
         setups['adl'] = 'set nlab [llength [label list Atoms]]\nlabel add Atoms 0/{}\nlabel textsize {}\n' \
                         'label textthickness 3\ncolor Labels Atoms {}\nlabel textformat Atoms $nlab "{}"\n' \
                         '\n'.format(atom_index, tsize, label_color, label)
-    if 'remove_label' in action.action_type or 'remove_distance' in action.action_type:  # TODO dist
+    if 'remove_label' in action.action_type or 'remove_distance' in action.action_type:
         lab_type = 'Atoms' if 'remove_label' in action.action_type else 'Bonds'
         remove_all = False
         try:
@@ -220,7 +220,7 @@ def gen_setup(action):
             alias = 'label{}'.format(len(action.scene.labels['Atoms'])+1)
         action.scene.labels['Atoms'].append(alias)
         sel1 = action.parameters['selection1']
-        sel2 = action.parameters['selection2']
+        sel2 = action.parameters['selection2']  # TODO couple $newmol with alias
         setups['add'] = 'proc geom_center {{selection}} {{\n    set gc [veczero]\n' \
                         '    foreach coord [$selection get {{x y z}}] {{\n       set gc [vecadd $gc $coord]}}\n    ' \
                         'return [vecscale [expr 1.0 /[$selection num]] $gc]}}\n\n'.format()
@@ -396,7 +396,7 @@ def gen_command(action):
         commands['zou'] = "set t [lindex $zou $i]\n  scale by $t\n"
     if 'animate' in action.action_type:
         commands['ani'] = ''
-        if action.scene.counters['dist_labels'] > 0:
+        if len(action.scene.labels['Bonds']) > 0:  # TODO couple $newmol and reposition_dummies with alias
             commands['ani'] += 'reposition_dummies $newmol\n'
         commands['ani'] += "set t [lindex $ani $i]\n  animate goto $t\n"
     if 'highlight' in action.action_type:

@@ -40,8 +40,7 @@ class Script:
         """
         # the part below controls TCL/VMD rendering
         for scene in self.scenes:
-            tcl_script = scene()
-            # in scene() we also do generation of matplotlib figs on-the-fly
+            tcl_script = scene.tcl()  # this generates the TCL code, below we save it as a script and run VMD
             if scene.run_vmd:
                 with open('script_{}.tcl'.format(scene.name), 'w') as out:
                     out.write(tcl_script)
@@ -51,6 +50,8 @@ class Script:
                           'rm $i; done'.format(scene.name))
                 if not self.draft:
                     os.system('for i in $(ls {}-*png); do rm $(echo $i | sed "s/png/dat/g"); done'.format(scene.name))
+            for action in scene.actions:
+                action.generate_graph()  # here we generate matplotlib figs on-the-fly
         # at this stage, each scene should have all its initial frames rendered
         process_graphics.postprocessor(self)
         os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
@@ -285,12 +286,11 @@ class Scene:
             cumsum += action.framenum
         self.total_frames = cumsum
             
-    def __call__(self):
+    def tcl(self):
         """
         This is the top-level function that produces
         an executable TCL script based on the corresponding
-        action.generate() functions, as well as produces
-        matplotlib figures
+        action.generate() functions
         :return: str, TCL code
         """
         if self.visualization or self.structure:
@@ -331,13 +331,11 @@ class Scene:
                         'display resize {res}'.format(res=' '.join(str(x) for x in self.resolution))
             action_code = ''
             for ac in self.actions:
-                action_code += ac.generate()
+                action_code += ac.generate_tcl()
             if action_code:
                 code += action_code
         else:
             code = ''
-            for ac in self.actions:
-                _ = ac.generate()
         return code + '\nexit\n'
         
         
@@ -383,7 +381,7 @@ class Action:
     def __repr__(self):
         return self.description.split()[0]
     
-    def generate(self):
+    def generate_tcl(self):
         """
         Should produce the TCL code that will
         produce the action in question
@@ -392,13 +390,15 @@ class Action:
         actions_requiring_tcl = ['do_nothing', 'animate', 'rotate', 'zoom_in', 'zoom_out', 'make_transparent',
                                  'make_opaque', 'center_view', 'add_label', 'remove_label', 'highlight',
                                  'fit_trajectory', 'add_distance', 'remove_distance']
-        actions_requiring_genfig = ['show_figure', 'add_overlay']
-        if set(self.action_type).intersection(set(actions_requiring_genfig)):
-            process_graphics.gen_fig(self)
         if set(self.action_type).intersection(set(actions_requiring_tcl)):
             return tcl_actions.gen_loop(self)
         else:
             return ''
+    
+    def generate_graph(self):
+        actions_requiring_genfig = ['show_figure', 'add_overlay']
+        if set(self.action_type).intersection(set(actions_requiring_genfig)):
+            process_graphics.gen_fig(self)
     
     def parse(self, command):
         """
@@ -531,4 +531,17 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
         scr = Script(input_name)
-        scr.render()
+        try:
+            test_param = sys.argv[2]
+        except IndexError:
+            scr.render()
+        else:
+            if test_param == '-test':
+                for sscene in scr.scenes:
+                    stcl_script = sscene.tcl()
+                    if sscene.run_vmd:
+                        with open('script_{}.tcl'.format(sscene.name), 'w') as sout:
+                            sout.write(stcl_script)
+            else:
+                print("Warning: parameters beyond the first will be ignored\n\n")
+                scr.render()
