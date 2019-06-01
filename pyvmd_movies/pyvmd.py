@@ -243,7 +243,8 @@ class Scene:
         self.run_vmd = False
         self.total_frames = 0
         self.tachyon = None
-        self.counters = {'hl': 0, 'overlay': 0, 'make_transparent': 0, 'make_opaque': 0, 'rot': 0, 'dist_labels': 0}
+        self.counters = {'hl': 0, 'overlay': 0, 'make_transparent': 0, 'make_opaque': 0, 'rot': 0}
+        self.labels = {'Atoms': [], 'Bonds': []}
     
     def add_action(self, description):
         """
@@ -363,7 +364,7 @@ class Action:
                       'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames',
                                       'aspect_ratio', 'datafile'},
                       'add_label': {'label_color', 'atom_index', 'label', 'text_size'},
-                      'remove_label': {'alias'},  # TODO switch to user-defined aliases
+                      'remove_label': {'alias'},
                       'add_distance': {'selection1', 'selection2', 'label_color', 'text_size', 'alias'},
                       'remove_distance': {'alias'},
                       'fit_trajectory': {'selection'}
@@ -425,8 +426,11 @@ class Action:
             self.parameters['t'] = self.parameters['t'].rstrip('s')
         if not isinstance(self, SimultaneousAction):
             if spl[0] == 'highlight':
-                actions_count = self.scene.counters['hl']
-                self.highlights = {'hl{}'.format(actions_count): self.parameters}
+                try:
+                    alias = '_' + self.parameters['alias']
+                except KeyError:
+                    alias = self.scene.counters['hl']
+                self.highlights = {'hl{}'.format(alias): self.parameters}
                 self.scene.counters['hl'] += 1
             if spl[0] in ['make_transparent', 'make_opaque']:
                 self.transp_changes = {spl[0]: self.parameters}
@@ -496,9 +500,10 @@ class SimultaneousAction(Action):
                 self.parse_many(action, self.transp_changes, action.split()[0])
             elif action.split()[0] == 'rotate':
                 self.parse_many(action, self.rots, 'rot')
-            elif action.split()[0] in ['fit_trajectory', 'center_view', 'add_label', 'remove_label']:
+            elif action.split()[0] in ['fit_trajectory', 'center_view', 'add_label', 'remove_label',
+                                       'add_distance', 'remove_distance']:
                 raise RuntimeError("{} is an instantaneous action (i.e. doesn't last over finite time interval) and "
-                                   "cannot be combined with others".format(action.split()[0]))
+                                   "cannot be combined with finite-time ones".format(action.split()[0]))
             super().parse(action)
         self.action_type = [action.split()[0] for action in actions]
         if 'zoom_in' in self.action_type and 'zoom_out' in self.action_type:
@@ -507,9 +512,13 @@ class SimultaneousAction(Action):
     def parse_many(self, directive, actions_dict, keyword):
         actions_count = self.scene.counters[keyword]
         self.scene.counters[keyword] += 1
-        ind = str(actions_count)
         spl = self.split_input_line(directive)
-        actions_dict[keyword + ind] = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}
+        prm_dict = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}
+        if 'alias' in prm_dict.keys():
+            alias = '_' + prm_dict['alias']
+        else:
+            alias = str(actions_count)
+        actions_dict[keyword + alias] = prm_dict
     
 
 if __name__ == "__main__":

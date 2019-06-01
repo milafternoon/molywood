@@ -163,16 +163,46 @@ def gen_setup(action):
             tsize = 1.0
         else:
             check_if_convertible(tsize, float, 'text_size')
+        try:
+            alias = action.parameters['alias']
+        except KeyError:
+            alias = 'label{}'.format(len(action.scene.labels['Atoms'])+1)
+        action.scene.labels['Atoms'].append(alias)
         atom_index = action.parameters['atom_index']
         label = action.parameters['label']
         check_if_convertible(atom_index, int, 'atom_index')
         setups['adl'] = 'set nlab [llength [label list Atoms]]\nlabel add Atoms 0/{}\nlabel textsize {}\n' \
                         'label textthickness 3\ncolor Labels Atoms {}\nlabel textformat Atoms $nlab "{}"\n' \
                         '\n'.format(atom_index, tsize, label_color, label)
-    if 'remove_label' in action.action_type:
-        lab_id = action.parameters['id']
-        check_if_convertible(lab_id, int, 'id')
-        setups['rml'] = 'label delete Atoms {}'.format(lab_id)
+    if 'remove_label' in action.action_type or 'remove_distance' in action.action_type:  # TODO dist
+        lab_type = 'Atoms' if 'remove_label' in action.action_type else 'Bonds'
+        remove_all = False
+        try:
+            alias = action.parameters['alias']
+        except KeyError:
+            alias = ''
+            try:
+                remove_all = action.parameters['all']
+            except KeyError:
+                raise RuntimeError('To remove a label, either "all=t" or "alias=..." have to be specified')
+            else:
+                if remove_all in ['y', 't', 'yes', 'true']:
+                    remove_all = True
+                else:
+                    raise RuntimeError('To remove a label, either "all=t" or "alias=..." have to be specified')
+        if alias:
+            try:
+                alias_index = action.scene.labels[lab_type].index(alias)
+            except ValueError:
+                raise RuntimeError('"{}" is not a valid alias; to remove a label, alias has to match a previously added'
+                                   'one'.format(alias))
+            else:
+                action.scene.labels[lab_type].pop(alias_index)
+                setups['rml'] = 'label delete {} {}\n'.format(lab_type, alias_index)
+        elif remove_all:
+            nlab = len(action.scene.labels[lab_type])
+            setups['rml'] = nlab * 'label delete {} 0\n'.format(lab_type)
+            action.scene.labels[lab_type] = []
     if 'add_distance' in action.action_type:
         try:
             label_color = action.parameters['label_color']
@@ -184,6 +214,11 @@ def gen_setup(action):
             tsize = 1.0
         else:
             check_if_convertible(tsize, float, 'text_size')
+        try:
+            alias = action.parameters['alias']
+        except KeyError:
+            alias = 'label{}'.format(len(action.scene.labels['Atoms'])+1)
+        action.scene.labels['Atoms'].append(alias)
         sel1 = action.parameters['selection1']
         sel2 = action.parameters['selection2']
         setups['add'] = 'proc geom_center {{selection}} {{\n    set gc [veczero]\n' \
@@ -371,14 +406,11 @@ def gen_command(action):
             mode = hl['mode'] if 'mode' in hl.keys() else 'ud'
             if mode == 'd':
                 try:
-                    ind = hl['highlight_index']
+                    _ = hl['alias']
                 except KeyError:
-                    raise RuntimeError('When mode=d, an index_highlight has to be supplied to specify which highlight'
-                                       'has to be turned off')
-                else:
-                    commands[lb] = "set t [lindex ${} $i]\n  material change opacity $mathl{} $t\n".format(lb, ind)
-            else:
-                commands[lb] = "set t [lindex ${} $i]\n  material change opacity $mat{} $t\n".format(lb, lb)
+                    raise RuntimeError('When mode=d, an alias has to be supplied to specify which highlight'
+                                       'has to be turned off.')
+            commands[lb] = "set t [lindex ${} $i]\n  material change opacity $mat{} $t\n".format(lb, lb)
     return commands
 
 
