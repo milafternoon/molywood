@@ -220,22 +220,25 @@ def gen_setup(action):
             alias = 'label{}'.format(len(action.scene.labels['Atoms'])+1)
         action.scene.labels['Atoms'].append(alias)
         sel1 = action.parameters['selection1']
-        sel2 = action.parameters['selection2']  # TODO couple $newmol with alias
+        sel2 = action.parameters['selection2']
         setups['add'] = 'proc geom_center {{selection}} {{\n    set gc [veczero]\n' \
                         '    foreach coord [$selection get {{x y z}}] {{\n       set gc [vecadd $gc $coord]}}\n    ' \
                         'return [vecscale [expr 1.0 /[$selection num]] $gc]}}\n\n'.format()
-        setups['add'] += 'set newmol [mol new atoms 2]\nmol representation Lines\nmol selection all\n' \
-                         'mol addrep $newmol\nlabel add Bonds 1/0 1/1\ncolor Labels Bonds {}\n' \
-                         'label textsize {}\nlabel textthickness 3\nmol top 0\n\n'.format(label_color, tsize)
-        setups['add'] += 'proc reposition_dummies {{newmol}} {{  animate dup $newmol\n' \
-                         '  set sel [atomselect $newmol "index 0"]\n  set ssel [atomselect 0 "{}"]\n' \
+        setups['add'] += 'set newmol{} [mol new atoms 2]\nmol representation Lines\nmol selection all\n' \
+                         'mol addrep $newmol{}\nlabel add Bonds 1/0 1/1\ncolor Labels Bonds {}\n' \
+                         'label textsize {}\nlabel textthickness 3\nmol top 0\n\n'.format(alias, alias, label_color,
+                                                                                          tsize)
+        setups['add'] += 'proc reposition_dummies {{molind}} {{  animate dup $molind\n' \
+                         '  set sel [atomselect $molind "index 0"]\n  set ssel [atomselect 0 "{}"]\n' \
                          '  $sel set {{x y z}} [list [geom_center $ssel]]\n  set ssel [atomselect 0 "{}"]\n' \
-                         '  set sel [atomselect $newmol "index 1"]\n  $sel set {{x y z}} [list [geom_center $ssel]]\n' \
-                         '}}\n\nreposition_dummies $newmol\n\n'.format(sel1, sel2)
-        if action.scene.visualization:
-            setups['add'] += 'display resetview\nmolinfo 0 set {center_matrix rotate_matrix scale_matrix ' \
-                             'global_matrix} $viewpoints(0)\nmolinfo $newmol set {center_matrix rotate_matrix ' \
-                             'scale_matrix global_matrix} $viewpoints(0)\n\n'
+                         '  set sel [atomselect $molind "index 1"]\n  $sel set {{x y z}} [list [geom_center $ssel]]\n' \
+                         '}}\n\nreposition_dummies $newmol{}\n\n'.format(sel1, sel2, alias)
+        if action.scene.visualization:  # re-align all after display resetview
+            setups['add'] += 'display resetview\n'
+            setups['add'] += 'molinfo 0 set {{center_matrix rotate_matrix scale_matrix global_matrix}} $viewpoints(0)\n'
+            for ali in action.scene.labels['Atoms']:
+                setups['add'] += 'molinfo $newmol{} set {{center_matrix rotate_matrix ' \
+                                 'scale_matrix global_matrix}} $viewpoints(0)\n\n'.format(ali)
         action.scene.counters['dist_labels'] += 1
     if 'highlight' in action.action_type:
         colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
@@ -397,7 +400,8 @@ def gen_command(action):
     if 'animate' in action.action_type:
         commands['ani'] = ''
         if len(action.scene.labels['Bonds']) > 0:  # TODO couple $newmol and reposition_dummies with alias
-            commands['ani'] += 'reposition_dummies $newmol\n'
+            for alias in action.scene.labels['Bonds']:
+                commands['ani'] += 'reposition_dummies $newmol{}\n'.format(alias)
         commands['ani'] += "set t [lindex $ani $i]\n  animate goto $t\n"
     if 'highlight' in action.action_type:
         hls = [action.highlights[x] for x in action.highlights.keys()]
