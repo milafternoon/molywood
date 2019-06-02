@@ -1,6 +1,8 @@
 ### What does `pyvmd` do?
 
-`pyvmd` automatizes the most tedious steps in generation of molecular
+PyVMD is there to make cool molecular movies for you.
+
+Specifically, `pyvmd` automatizes the most tedious steps in generation of these
 movies, i.e. scripting in TCL, rendering, generating overlays and
 combining frames, as well as merging frames into the final movie.
 
@@ -75,7 +77,7 @@ text_size=... alias=...\])
 + remove_label (\[alias=... remove_all=**n**\])
 + remove_distance (\[alias=... remove_all=**n**\])
 
-###### Finite-time actions
+###### Finite-time actions:
 
 + animate (frames=init_frame:final_frame t=...s \[smooth=...\])
 + rotate (axis=x/y/z angle=... t=...s \[sigmoid=**t**/f/sls\])
@@ -146,7 +148,33 @@ relative to the background figure, and the aspect ratio (X to Y size)
 can all be specified independently to position the inset/overlay as
 desired.
 
-#### Notes on individual actions
+### Notes on individual actions
+
+###### Instantaneous actions:
+
++ `center_view` is an instantaneous action that sets the geometric
+center of `selection` (VMD-compatible) as the new camera center to
+which zoom will converge; useful when zooming onto e.g. a reaction center
++ `fit_trajectory` uses RMSD-based fitting to instantaneously align a
+ trajectory to the reference (first) frame, using the `selection` to
+ calculate the optimal alignment
++ `add_label` instantaneously adds a text label anchored to an atom
+ specified with `atom_index`, with the labeling text specified through
+ the `label` parameter; if desired, text size  and color can be
+ specified with `label_color` and `text_size`.
++ `add_distance` instantaneously adds a distance label between
+ the centers of geometry of two VMD-compatible selections, specified
+ with `selection1` and `selection2`; as above, text size  and color can
+ be specified with `label_color` and `text_size`.
++ `remove_label` instantaneously deletes a label specified through
+ `alias=...` identical to an `alias` previously specified in `add_label`;
+ alternatively, `all=t` removes all existing labels. Note that `alias=...`
+ and `all=t` should be mutually exclusive: one either deletes a specific
+ label or all of them.
++ `remove_distance` works identically to `remove_label`, but affects
+labels added using `add_distance` instead of `add_label`.
+
+###### Finite-time actions:
 
 + `animate` runs the trajectory from `init_frame` to `final_frame`,
 adjusting the playback speed to the time specified with `t`;
@@ -160,9 +188,6 @@ linear-smooth transition (preferable for e.g. multiple full rotations)
 + `make_transparent`/`make_opaque` change the opacity of a selected
 `material` to make it fully transparent or fully opaque in time `t`.
 `sigmoid` works like for `rotation`.
-+ `center_view` is an instantaneous action that sets the geometric
-center of `selection` (VMD-compatible) as the new camera center to
-which zoom will converge; useful when zooming onto e.g. a reaction center
 + `show_figure` just shows an image instead of a VMD render during time
 `t`; the image is specified using `figure_index` in conjunction with
  the globally defined list of figure paths, `$ figure files=...`
@@ -185,19 +210,6 @@ which zoom will converge; useful when zooming onto e.g. a reaction center
     many `add_overlay` commands separated by semicolons and encircled
     in curly brackets works just as any other multiple action (see
     `Notes on input formatting` above).
- + `add_label` instantaneously adds a text label anchored to an atom
- specified with `atom_index`, with the labeling text specified through
- the `label` parameter; if desired, text size  and color can be
- specified with `label_color` and `text_size`.
- + `add_distance` instantaneously adds a distance label between
- the centers of geometry of two selections, specified with `selection1`
- and `selection2`; as above, text size  and color can be specified with
- `label_color` and `text_size`.
- + `remove_label` instantaneously deletes a label specified through
- `id`, with the 0-based ID being related to the number of currently
- displayed labels (if e.g. 3 labels were added previously, possible IDs
- are 0, 1 and 2, in the order of their creation; after one  is deleted,
- the new possible IDs are 0 and 1).
  + `highlight` creates a new representation to highlight a subset of
  the system selected by specifying the `selection` parameter. Color can
  be chosen with `color`, using either simple color names (black, red,
@@ -210,9 +222,6 @@ which zoom will converge; useful when zooming onto e.g. a reaction center
     highlight to stay visible, use `mode=u` (up) to make it appear only.
     + To turn off a previously created highlight (possibly after several
     intervening actions), use `mode=d` (down) along with
-    `highlight_index` specifying the (0-based) index of the highlight
-    to be turned off; highlights are indexed by counting all `highlight`
-    keywords in the input, consecutively.
- + `fit_trajectory` uses RMSD-based fitting to instantaneously align a
- trajectory to the reference (first) frame, using the `selection` to
- calculate the optimal alignment
+    `alias=...` identical to a previously set `alias` of the highlight
+    to be turned off; you only need to provide an alias to a highlight
+    if you first turn it on and want to turn off later.
