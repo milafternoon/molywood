@@ -33,8 +33,9 @@ run e.g. `convert` to make sure it is available on your machine.
 + `ffmpeg` can be installed e.g. from the Ubuntu repository by
 typing `sudo apt-get install ffmpeg`.
 
-If any dependencies are missing on your machine, you can also
-automatically batch-download them by creating a `conda` environment.
+If any dependencies are missing on your machine (or on the workstation
+you don't have root access to), you can also automatically
+batch-download them by creating a local `conda` environment.
 To this end, run the following commands from your console:
 
 `conda env create -f environment.yml`

@@ -17,13 +17,11 @@ class Script:
     """
     allowed_globals = ['global', 'layout', 'figure']
     allowed_params = {'global': ['fps', 'keepframes', 'draft', 'name'],
-                      'layout': ['columns', 'rows'],
-                      'figure': ['files']}
+                      'layout': ['columns', 'rows']}
     
     def __init__(self, scriptfile=None):
         self.name = 'movie'
         self.scenes = []
-        self.figures = []
         self.directives = {}
         self.fps = 20
         self.draft = False
@@ -216,10 +214,6 @@ class Script:
                 else False
         except KeyError:
             pass
-        try:
-            self.figures = self.directives['figure']['files'].split(',')
-        except KeyError:
-            pass
         for scene in self.scenes:
             scene.calc_framenum()
         
@@ -358,8 +352,8 @@ class Action:
                       'highlight': {'selection', 't', 'color', 'mode', 'style', 'alias'},
                       'make_opaque': {'material', 't', 'sigmoid'},
                       'center_view': {'selection'},
-                      'show_figure': {'figure_index', 't', 'datafile'},
-                      'add_overlay': {'figure_index', 't', 'origin', 'relative_size', 'frames',
+                      'show_figure': {'figure', 't', 'datafile'},  # TODO check that add_overlay does not shadow sh_fig
+                      'add_overlay': {'figure', 't', 'origin', 'relative_size', 'frames',
                                       'aspect_ratio', 'datafile'},
                       'add_label': {'label_color', 'atom_index', 'label', 'text_size'},
                       'remove_label': {'alias'},
