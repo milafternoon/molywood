@@ -1,6 +1,5 @@
 $ global          fps=10  draft=false  keepframes=true
 $ layout          rows=1  columns=2
-$ figure          files=logo_big.png
 $ scene_1         visualization=vis.vmd  position=0,0 resolution=500,500
 $ scene_2         position=0,1 resolution=500,500
 
@@ -23,4 +22,4 @@ animate           t=5s frames=0:80 smooth=3
 
 # scene_2
 
-show_figure       t=19s figure_index=0
+show_figure       t=19s figure=logo_big.png

@@ -75,11 +75,13 @@ def gen_fig(action):
     if 'show_figure' in action.action_type:
         if 'figure' in action.parameters.keys():
             fig_file = action.parameters['figure']
+            fig_file = action.scene.script.check_path(fig_file)
             for fr in range(action.initframe, action.initframe + action.framenum):
                 os.system('convert {} -resize {}x{} {}-{}.png'.format(fig_file, *action.scene.resolution,
                                                                       action.scene.name, fr))
         elif 'datafile' in action.parameters.keys():
             df = action.parameters['datafile']
+            df = action.scene.script.check_path(df)
             data_simple_plot(action, df, 'spl')
             for fr in range(action.initframe, action.initframe + action.framenum):
                 fig_file = '{}-{}.png'.format(action.scene.name, fr)
@@ -94,11 +96,13 @@ def gen_fig(action):
             overlay_res = [scaling * r for r in res]
             if 'figure' in action.overlays[ovl].keys():
                 fig_file = action.overlays[ovl]['figure']
+                fig_file = action.scene.script.check_path(fig_file)
                 for fr in frames:
                     ovl_file = '{}-{}-{}.png'.format(ovl, scene, fr)
                     os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, ovl_file))
             elif 'datafile' in list(action.overlays[ovl].keys()):
                 df = action.overlays[ovl]['datafile']
+                df = action.scene.script.check_path(df)
                 data_simple_plot(action, df, ovl)
                 for fr in frames:
                     fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)

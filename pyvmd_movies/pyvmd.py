@@ -15,7 +15,7 @@ class Script:
     and render the movie (possibly with multiple
     panels, overlays etc.)
     """
-    allowed_globals = ['global', 'layout', 'figure']
+    allowed_globals = ['global', 'layout']
     allowed_params = {'global': ['fps', 'keepframes', 'draft', 'name'],
                       'layout': ['columns', 'rows']}
     
@@ -26,8 +26,9 @@ class Script:
         self.fps = 20
         self.draft = False
         self.keepframes = True
-        if scriptfile:
-            self.from_file(scriptfile)
+        self.scriptfile = scriptfile
+        if self.scriptfile:
+            self.from_file()
 
     def render(self):
         """
@@ -86,14 +87,13 @@ class Script:
             print('\n\n\tScene {}: \n\n'.format(subscript.name))
             subscript.show_script()
 
-    def from_file(self, filename):
+    def from_file(self):
         """
         Reads the full movie script from an input file
         and runs parser/setter functions
-        :param filename: str, name of the file
         :return: None
         """
-        script = [line.strip() for line in open(filename, 'r')]
+        script = [line.strip() for line in open(self.scriptfile, 'r')]
         current_sub = '_default'
         subscripts = {current_sub: []}
         multiline = None
@@ -166,9 +166,11 @@ class Script:
             if scenes[sub]:
                 if sub in self.directives.keys():
                     try:
-                        tcl = self.directives[sub]['visualization']
+                        tcl = self.directives[sub]['visualization']  # TODO maybe add relative/abs paths?
                     except KeyError:
                         pass
+                    else:
+                        tcl = self.check_path(tcl)
                     try:
                         pos = [int(x) for x in self.directives[sub]['position'].split(',')]
                     except KeyError:
@@ -185,10 +187,14 @@ class Script:
                         struct = self.directives[sub]['structure']
                     except KeyError:
                         pass
+                    else:
+                        struct = self.check_path(struct)
                     try:
                         traj = self.directives[sub]['trajectory']
                     except KeyError:
                         pass
+                    else:
+                        traj = self.check_path(traj)
                 objects.append(Scene(self, sub, tcl, py, res, pos, struct, traj))
                 for action in scenes[sub]:
                     objects[-1].add_action(action)
@@ -216,7 +222,20 @@ class Script:
             pass
         for scene in self.scenes:
             scene.calc_framenum()
-        
+    
+    def check_path(self, filename):
+        if os.path.isfile(filename):
+            return filename
+        elif not os.path.isfile(filename) and '/' in self.scriptfile:
+            prefix = '/'.join(self.scriptfile.split('/')[:-1]) + '/'
+            if os.path.isfile(prefix + filename):
+                return prefix + filename
+            else:
+                raise RuntimeError('File {} could not been found neither in the local directory '
+                                   'nor in {}'.format(filename, prefix))
+        else:
+            raise RuntimeError('File {} not found, please make sure there are no typos in the name'.format(filename))
+
 
 class Scene:
     """
@@ -355,10 +374,10 @@ class Action:
                       'show_figure': {'figure', 't', 'datafile'},  # TODO check that add_overlay does not shadow sh_fig
                       'add_overlay': {'figure', 't', 'origin', 'relative_size', 'frames',
                                       'aspect_ratio', 'datafile'},
-                      'add_label': {'label_color', 'atom_index', 'label', 'text_size'},
-                      'remove_label': {'alias'},
+                      'add_label': {'label_color', 'atom_index', 'label', 'text_size', 'alias'},
+                      'remove_label': {'alias', 'all'},
                       'add_distance': {'selection1', 'selection2', 'label_color', 'text_size', 'alias'},
-                      'remove_distance': {'alias'},
+                      'remove_distance': {'alias', 'all'},
                       'fit_trajectory': {'selection'}
                       }
     

@@ -239,7 +239,6 @@ def gen_setup(action):
             for ali in action.scene.labels['Atoms']:
                 setups['add'] += 'molinfo $newmol{} set {{center_matrix rotate_matrix ' \
                                  'scale_matrix global_matrix}} $viewpoints(0)\n\n'.format(ali)
-        action.scene.counters['dist_labels'] += 1
     if 'highlight' in action.action_type:
         colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
         hls = [action.highlights[x] for x in action.highlights.keys()]
