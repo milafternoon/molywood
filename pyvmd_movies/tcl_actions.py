@@ -35,7 +35,7 @@ def sigmoid_norm_prod(cumprod, n_points, abruptness=1):
     :param abruptness: float, how fast the transition is
     :return: numpy.array, array of increments
     """
-    increments = np.array(1) + sigmoid_increments(n_points, abruptness)
+    increments = np.array([1]) + sigmoid_increments(n_points, abruptness)
     prod = np.prod(increments)
     exponent = np.log(cumprod)/np.log(prod)
     return increments**exponent
@@ -73,7 +73,7 @@ def logistic(x, k):
     :param k: transition abruptness
     :return: numpy.array, values of the logistic fn
     """
-    return np.array(1/(1+np.exp(-k*x)))
+    return np.array([1/(1+np.exp(-k*x))])
 
 
 def logistic_deriv(x, k):
@@ -85,7 +85,7 @@ def logistic_deriv(x, k):
     :return: numpy.array, values of the logistic fn derivative
     """
     logi = logistic(x, k)
-    return np.array(logi*(1-logi))
+    return np.array([logi*(1-logi)])
 
 
 def gen_loop(action):
@@ -217,13 +217,13 @@ def gen_setup(action):
         try:
             alias = action.parameters['alias']
         except KeyError:
-            alias = 'label{}'.format(len(action.scene.labels['Atoms'])+1)
-        action.scene.labels['Atoms'].append(alias)
+            alias = 'label{}'.format(len(action.scene.labels['Bonds'])+1)
+        action.scene.labels['Bonds'].append(alias)
         sel1 = action.parameters['selection1']
         sel2 = action.parameters['selection2']
-        setups['add'] = 'proc geom_center {{selection}} {{\n    set gc [veczero]\n' \
-                        '    foreach coord [$selection get {{x y z}}] {{\n       set gc [vecadd $gc $coord]}}\n    ' \
-                        'return [vecscale [expr 1.0 /[$selection num]] $gc]}}\n\n'.format()
+        setups['add'] = 'proc geom_center {selection} {\n    set gc [veczero]\n' \
+                        '    foreach coord [$selection get {x y z}] {\n       set gc [vecadd $gc $coord]}\n    ' \
+                        'return [vecscale [expr 1.0 /[$selection num]] $gc]}\n\n'
         setups['add'] += 'set newmol{} [mol new atoms 2]\nmol representation Lines\nmol selection all\n' \
                          'mol addrep $newmol{}\nlabel add Bonds 1/0 1/1\ncolor Labels Bonds {}\n' \
                          'label textsize {}\nlabel textthickness 3\nmol top 0\n\n'.format(alias, alias, label_color,
@@ -235,8 +235,8 @@ def gen_setup(action):
                          '}}\n\nreposition_dummies $newmol{}\n\n'.format(sel1, sel2, alias)
         if action.scene.visualization:  # re-align all after display resetview
             setups['add'] += 'display resetview\n'
-            setups['add'] += 'molinfo 0 set {{center_matrix rotate_matrix scale_matrix global_matrix}} $viewpoints(0)\n'
-            for ali in action.scene.labels['Atoms']:
+            setups['add'] += 'molinfo 0 set {center_matrix rotate_matrix scale_matrix global_matrix} $viewpoints(0)\n'
+            for ali in action.scene.labels['Bonds']:
                 setups['add'] += 'molinfo $newmol{} set {{center_matrix rotate_matrix ' \
                                  'scale_matrix global_matrix}} $viewpoints(0)\n\n'.format(ali)
     if 'highlight' in action.action_type:
@@ -398,7 +398,7 @@ def gen_command(action):
         commands['zou'] = "set t [lindex $zou $i]\n  scale by $t\n"
     if 'animate' in action.action_type:
         commands['ani'] = ''
-        if len(action.scene.labels['Bonds']) > 0:  # TODO couple $newmol and reposition_dummies with alias
+        if len(action.scene.labels['Bonds']) > 0:
             for alias in action.scene.labels['Bonds']:
                 commands['ani'] += 'reposition_dummies $newmol{}\n'.format(alias)
         commands['ani'] += "set t [lindex $ani $i]\n  animate goto $t\n"

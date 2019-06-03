@@ -3,10 +3,10 @@ import os
 
 if __name__ == "__main__":
     import tcl_actions
-    import process_graphics
+    import graphics_actions
 else:
     import pyvmd_movies.tcl_actions as tcl_actions
-    import pyvmd_movies.process_graphics as process_graphics
+    import pyvmd_movies.graphics_actions as graphics_actions
 
 
 class Script:
@@ -52,7 +52,7 @@ class Script:
             for action in scene.actions:
                 action.generate_graph()  # here we generate matplotlib figs on-the-fly
         # at this stage, each scene should have all its initial frames rendered
-        process_graphics.postprocessor(self)
+        graphics_actions.postprocessor(self)
         os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
                   '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" movie.mp4'.format(self.fps, self.name))
         if not self.keepframes:
@@ -114,6 +114,8 @@ class Script:
                     multiline = None
                 else:
                     subscripts[current_sub].append(line)
+        if multiline:
+            raise RuntimeError("Error: not all curly brackets {} were closed, revise your input")
         Script.allowed_globals.extend(list(subscripts.keys()))
         for sc in subscripts.keys():
             Script.allowed_params[sc] = ['visualization', 'structure', 'trajectory', 'position', 'resolution']
@@ -373,7 +375,7 @@ class Action:
                       'center_view': {'selection'},
                       'show_figure': {'figure', 't', 'datafile'},  # TODO check that add_overlay does not shadow sh_fig
                       'add_overlay': {'figure', 't', 'origin', 'relative_size', 'frames',
-                                      'aspect_ratio', 'datafile'},
+                                      'aspect_ratio', 'datafile', '2D'},
                       'add_label': {'label_color', 'atom_index', 'label', 'text_size', 'alias'},
                       'remove_label': {'alias', 'all'},
                       'add_distance': {'selection1', 'selection2', 'label_color', 'text_size', 'alias'},
@@ -411,7 +413,7 @@ class Action:
     def generate_graph(self):
         actions_requiring_genfig = ['show_figure', 'add_overlay']
         if set(self.action_type).intersection(set(actions_requiring_genfig)):
-            process_graphics.gen_fig(self)
+            graphics_actions.gen_fig(self)
     
     def parse(self, command):
         """
@@ -526,7 +528,7 @@ class SimultaneousAction(Action):
         actions_count = self.scene.counters[keyword]
         self.scene.counters[keyword] += 1
         spl = self.split_input_line(directive)
-        prm_dict = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}
+        prm_dict = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}  # TODO catch
         if 'alias' in prm_dict.keys():
             alias = '_' + prm_dict['alias']
         else:

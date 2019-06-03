@@ -92,7 +92,10 @@ def gen_fig(action):
         scene = action.scene.name
         res = action.scene.resolution
         for ovl in action.overlays.keys():
-            scaling = float(action.overlays[ovl]['relative_size'])
+            try:
+                scaling = float(action.overlays[ovl]['relative_size'])
+            except KeyError:
+                raise RuntimeError("With add_overlay, 'relative_size=... has to be specified")
             overlay_res = [scaling * r for r in res]
             if 'figure' in action.overlays[ovl].keys():
                 fig_file = action.overlays[ovl]['figure']
@@ -193,33 +196,61 @@ def data_simple_plot(action, datafile, basename):
         asp_ratio = res[0]/res[1]
     plt.rcParams['figure.figsize'] = [4.8 * asp_ratio, 4.8]
     draw_point = True
-    data = np.loadtxt(datafile)
+    data = np.loadtxt(datafile, comments=['!', '#'])
+    assert data.shape[1] == 2
     try:
         labels = [x.strip() for x in open(datafile) if x.strip().startswith('#')][0]
     except IndexError:
         labels = ['Time', 'Value']
     else:
         labels = labels.strip('#').strip().split(';')
-    xmin, xmax = np.min(data[:, 0]), np.max(data[:, 0])
-    ymin, ymax = np.min(data[:, 1]), np.max(data[:, 1])
     try:
-        animation_frames = [int(x) for x in action.parameters['frames'].split(':')]
+        mpl_kw = [x.strip() for x in open(datafile) if x.strip().startswith('!')][0]
+    except IndexError:
+        mpl_kw = {}
+    else:
+        mpl_kw = {x.split('=')[0]: x.split('=')[1] for x in mpl_kw.strip('!').strip().split()}
+        for kw in mpl_kw.keys():
+            try:
+                mpl_kw[kw] = eval(mpl_kw[kw])
+            except NameError:
+                pass
+    if 'xlim' not in mpl_kw.keys():
+        xmin, xmax = np.min(data[:, 0]), np.max(data[:, 0])
+    else:
+        xmin, xmax = mpl_kw['xlim']
+    if 'ylim' not in mpl_kw.keys():
+        ymin, ymax = np.min(data[:, 1]), np.max(data[:, 1])
+    else:
+        ymin, ymax = mpl_kw['ylim']
+    try:
+        animation_frames = [int(x) for x in action.overlays[basename]['frames'].split(':')]
         arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
     except KeyError:
         try:
-            animation_frames = [int(x) for x in action.overlays[basename]['frames'].split(':')]
+            animation_frames = [int(x) for x in action.parameters['frames'].split(':')]
             arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
         except (KeyError, AttributeError):
             draw_point = False
     for fr in range(action.initframe, action.initframe + action.framenum):
         count = fr - action.initframe
-        plt.plot(data[:, 0], data[:, 1], lw=3, zorder=0)
+        if '2D' in action.overlays[basename].keys() and action.overlays[basename]['2D'].lower() in ['t', 'y',
+                                                                                                    'true', 'yes']:
+            grid_x = int(np.sqrt(len(data) * asp_ratio) / 2)
+            grid_y = int(grid_x / asp_ratio)
+            if 'gridsize' not in mpl_kw.keys():
+                mpl_kw.update({'gridsize': (grid_x, grid_y)})
+            plt.hexbin(*data.T, zorder=0, **mpl_kw)
+        else:
+            if 'lw' not in mpl_kw.keys() and 'linewidth' not in mpl_kw.keys():
+                mpl_kw.update({'lw': 3})
+            plt.plot(*data.T, zorder=0, **mpl_kw)
+            plt.xlim(1.1 * xmin, 1.1 * xmax)
+            plt.ylim(1.1 * ymin, 1.1 * ymax)
         if draw_point:
             plt.scatter(data[arr[count], 0], data[arr[count], 1], c='r', s=250, zorder=1)
         plt.xlabel(labels[0])
         plt.ylabel(labels[1])
-        plt.xlim(1.1*xmin, 1.1*xmax)
-        plt.ylim(1.1*ymin, 1.1*ymax)
         plt.subplots_adjust(left=0.18, right=0.97, top=0.97, bottom=0.18)
         plt.savefig('{}-{}-{}.png'.format(basename, action.scene.name, fr))
         plt.clf()

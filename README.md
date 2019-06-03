@@ -84,10 +84,10 @@ text_size=... alias=...\])
 + rotate (axis=x/y/z angle=... t=...s \[sigmoid=**t**/f/sls\])
 + zoom_in/zoom_out (scale=... t=...s \[sigmoid=**t**/f/sls\])
 + make_transparent/make_opaque (material=... t=...s  \[sigmoid=**t**/f/sls\])
-+ show_figure (t=...s \[figure_index=... datafile=...\])
++ show_figure (t=...s \[figure=... datafile=...\])
 + do_nothing (t=...s)
-+ add_overlay (t=...s \[figure_index=... datafile=... origin=0,0
-relative_size=1 frames=init_frame:final_frame aspect_ratio=...\])
++ add_overlay (t=...s \[figure=... datafile=... origin=0,0
+relative_size=1 frames=init_frame:final_frame aspect_ratio=... 2D=t/**f**\])
 + highlight (selection=... t=... \[color=**black** mode=u/d/ud
 style=**newcartoon**/licorice/surf/quicksurf alias=...\])
 
@@ -129,25 +129,31 @@ shorthand notation (`t/f`, `y/n`)
 ### Notes on extra graphics features
 
 + External figures (e.g. ending credits) can be featured in the movies.
-The external graphics file has to be listed in the global `figure`
-directive (e.g. `$ figure files=graph.png`), and its index in the list
-has to be specified as a parameter in `show_figure` action (e.g.
-`show_figure t=4s figure_index=0`). In this way, multiple graphics files
-can be accessed independently by any `scene` object.
+The external graphics file has to be specified as a parameter in the
+`show_figure` action (e.g. `show_figure t=4s figure=picture.png`).
 + Note that it is *the user* who is responsible for setting correct
 resolutions for the individual scenes. By default, each scene is
 rendered in a resolution of 1000x1000; if e.g. a source figure isn't
 exactly rectangular, it will be scaled to
 fit in the rectangle, but its aspect ratio (shape) will not be affected.
 + Multiple overlays (insets) can be added to each scene. The inset can
-either be a static image (specified with the global `figure` keyword
-and then through `figure_index` in `add_overlay`), or a dynamically
-generated matplotlib plot (by specifying the `datafile` parameter in
-`add_overlay`). The relative coordinates of the origin (from `0,0` to
-denote bottom left to `1,1` to denote upper right corner), inset size
-relative to the background figure, and the aspect ratio (X to Y size)
-can all be specified independently to position the inset/overlay as
-desired.
+either be a static image (specified with the `figure` keyword in
+`add_overlay`), or a dynamically generated matplotlib plot (by
+specifying the `datafile` parameter in `add_overlay`). Currently 1D
+line plots (generated with plt.plot) and 2D histograms (generated with
+plt.hexbin) are supported; the former is default if a `datafile` is
+supplied, and the latter can be requested with `2D=t`. The relative
+coordinates of the origin (from `0,0` to denote bottom left to `1,1` to
+denote upper right corner), inset size relative to the background figure,
+and the aspect ratio (X to Y size) can all be specified independently to
+position the inset/overlay as desired.
++ When generating figures with matplotlib, axis labels can be specified
+directly in the datafile by adding a `# x label; y label` (spaces and
+latex-compatible math notation are allowed). In addition, multiple
+matplotlib-compatible `keyword=value` pairs can be enumerated after the
+`!` character to modify plt.plot/plt.hexbin defaults, e.g.
+`! bins='log' cmap='seismic'`, or plot properties, e.g.
+`! xlim=-1,2 ylim=0,500` (no spaces around the `=` sign).
 
 ### Notes on individual actions
 
