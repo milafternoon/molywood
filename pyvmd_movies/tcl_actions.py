@@ -35,7 +35,7 @@ def sigmoid_norm_prod(cumprod, n_points, abruptness=1):
     :param abruptness: float, how fast the transition is
     :return: numpy.array, array of increments
     """
-    increments = np.array([1]) + sigmoid_increments(n_points, abruptness)
+    increments = np.array(1) + sigmoid_increments(n_points, abruptness)
     prod = np.prod(increments)
     exponent = np.log(cumprod)/np.log(prod)
     return increments**exponent
@@ -73,7 +73,7 @@ def logistic(x, k):
     :param k: transition abruptness
     :return: numpy.array, values of the logistic fn
     """
-    return np.array([1/(1+np.exp(-k*x))])
+    return np.array(1/(1+np.exp(-k*x)))
 
 
 def logistic_deriv(x, k):
@@ -85,7 +85,7 @@ def logistic_deriv(x, k):
     :return: numpy.array, values of the logistic fn derivative
     """
     logi = logistic(x, k)
-    return np.array([logi*(1-logi)])
+    return np.array(logi*(1-logi))
 
 
 def gen_loop(action):
