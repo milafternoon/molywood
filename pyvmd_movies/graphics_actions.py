@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-
+# TODO add text labels generated on-the-fly
 def postprocessor(script):
     """
     This is the key function that controls composition
@@ -92,24 +92,37 @@ def gen_fig(action):
         scene = action.scene.name
         res = action.scene.resolution
         for ovl in action.overlays.keys():
-            try:
-                scaling = float(action.overlays[ovl]['relative_size'])
-            except KeyError:
-                raise RuntimeError("With add_overlay, 'relative_size=... has to be specified")
-            overlay_res = [scaling * r for r in res]
+            if 'figure' in action.overlays[ovl].keys() or 'datafile' in action.overlays[ovl].keys():
+                try:
+                    scaling = float(action.overlays[ovl]['relative_size'])
+                except KeyError:
+                    raise RuntimeError("With add_overlay, 'relative_size=... has to be specified")
+                else:
+                    overlay_res = [scaling * r for r in res]
             if 'figure' in action.overlays[ovl].keys():
                 fig_file = action.overlays[ovl]['figure']
                 fig_file = action.scene.script.check_path(fig_file)
                 for fr in frames:
                     ovl_file = '{}-{}-{}.png'.format(ovl, scene, fr)
                     os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, ovl_file))
-            elif 'datafile' in list(action.overlays[ovl].keys()):
+            elif 'datafile' in action.overlays[ovl].keys():
                 df = action.overlays[ovl]['datafile']
                 df = action.scene.script.check_path(df)
                 data_simple_plot(action, df, ovl)
                 for fr in frames:
                     fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
                     os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, fig_file))
+            elif 'text' in action.overlays[ovl].keys():
+                text = action.overlays[ovl]['text']
+                try:
+                    tsize = int(action.overlays[ovl]['textsize'])
+                except KeyError:
+                    tsize = 24
+                for fr in frames:
+                    fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
+                    os.system('convert -size {}x{} xc:transparent -font "AvantGarde-Book" -pointsize {} '
+                              '-gravity SouthWest -fill black -annotate +0+0 "{}" '
+                              '{}'.format(*res, tsize, text, fig_file))
                 
 
 def equalize_frames(script):
@@ -144,7 +157,7 @@ def compose_overlay(action):
     try:
         sigmoid = action.parameters['sigmoid']
     except KeyError:
-        sigmoid = True
+        sigmoid = False
     else:
         sigmoid = True if sigmoid.lower() in ['true', 't', 'y', 'yes'] else False
     if sigmoid:

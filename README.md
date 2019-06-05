@@ -86,8 +86,9 @@ text_size=... alias=...\])
 + make_transparent/make_opaque (material=... t=...s  \[sigmoid=**t**/f/sls\])
 + show_figure (t=...s \[figure=... datafile=...\])
 + do_nothing (t=...s)
-+ add_overlay (t=...s \[figure=... datafile=... origin=0,0
-relative_size=1 frames=init_frame:final_frame aspect_ratio=... 2D=t/**f**\])
++ add_overlay (t=...s \[figure=... datafile=... origin=0,0 text=...
+relative_size=1 frames=init_frame:final_frame aspect_ratio=... 2D=t/**f**\]
+textsize=\[24\] sigmoid=\[t/**f**\])
 + highlight (selection=... t=... \[color=**black** mode=u/d/ud
 style=**newcartoon**/licorice/surf/quicksurf alias=...\])
 
@@ -206,13 +207,20 @@ linear-smooth transition (preferable for e.g. multiple full rotations)
  `relative_size` (1 means fit into the whole  scene, 0.1 means fit into
  a rectangle 10% of the scene size).
     + The content of the overlay can be  an external figure (specified
-    through `figure_index`), or an on-the-fly  generated matplotlib line
-    plot (based on a data file speficied with the `datafile` parameter).
-    + If `frames` are simultaneously specified  e.g. in `animate` or
-    in `add_overlay` itself, a dot will follow the values on the plot.
+    through `figure_index`), an on-the-fly  generated matplotlib line
+    plot (based on a data file speficied with the `datafile` parameter)
+    or plain text.
+    + If `frames=...` and `datafile=...` are simultaneously specified,
+     a dot will dynamically follow the values on the plot. If `frames`
+     is supplied with `animate` only, the same datapoint indices will
+     be used for the movie and the plot. If `frames` is supplied
+     to both, selection of simulation frames and data points can be
+     made independent.
     + If the  data file starts with a single line formatted as
     `# x axis label; y axis label`, `x axis label` and `y axis label`
     will be used to label the corresponding axes of the plot.
+    + If `text="sample text` is used, the text will be displayed at
+    a position specified with `origin`.
     + Mulitple overlays can be added to a scene simultaneously; adding
     many `add_overlay` commands separated by semicolons and encircled
     in curly brackets works just as any other multiple action (see

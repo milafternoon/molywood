@@ -168,8 +168,8 @@ class Script:
             if scenes[sub]:
                 if sub in self.directives.keys():
                     try:
-                        tcl = self.directives[sub]['visualization']  # TODO maybe add relative/abs paths?
-                    except KeyError:
+                        tcl = self.directives[sub]['visualization']  # TODO use rel path when abs is not found
+                    except KeyError:  # TODO test two_panel with conda active; maybe add 1s delay?
                         pass
                     else:
                         tcl = self.check_path(tcl)
@@ -323,22 +323,6 @@ class Scene:
                         'mol color Structure\nmol selection {all}\nmol material Opaque\nmol addrep top\n'
             code += 'axes location off\n'
             if not self.script.draft:
-                vmd_path = str(os.popen('which vmd').read().strip())
-                if vmd_path:
-                    if sys.platform.startswith('linux'):
-                        vmd_path = '/'.join(vmd_path.split('/')[:-2])
-                        self.tachyon = os.popen('ls {}/lib/vmd/tachyon*'.format(vmd_path)).read().strip()
-                    elif sys.platform == 'darwin' or sys.platform.startswith('os'):
-                        vmd_path = '/'.join(vmd_path.split('/')[:-1])
-                        self.tachyon = os.popen('ls {}/tachyon*'.format(vmd_path)).read().strip()
-                else:
-                    try:
-                        self.tachyon = self.script.directives['global']['vmd_path']
-                    except KeyError:
-                        raise RuntimeError('VMD could not be found; please make sure it is installed and either'
-                                           '(a) add it to your $PATH variable or (b) add "vmd_path"=...'
-                                           'to your input file for pyvmd; note that you might need to switch'
-                                           'to a Unix-compatible OS')
                 code += 'render options Tachyon \"$env(TACHYON_BIN)\" -aasamples 12 %s -format ' \
                         'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
             else:
@@ -375,7 +359,7 @@ class Action:
                       'center_view': {'selection'},
                       'show_figure': {'figure', 't', 'datafile'},  # TODO check that add_overlay does not shadow sh_fig
                       'add_overlay': {'figure', 't', 'origin', 'relative_size', 'frames',
-                                      'aspect_ratio', 'datafile', '2D'},
+                                      'aspect_ratio', 'datafile', '2D', 'text', 'textsize'},
                       'add_label': {'label_color', 'atom_index', 'label', 'text_size', 'alias'},
                       'remove_label': {'alias', 'all'},
                       'add_distance': {'selection1', 'selection2', 'label_color', 'text_size', 'alias'},
@@ -430,7 +414,11 @@ class Action:
             raise RuntimeError("Overlays can only be added simultaneously with another action, not as"
                                "a standalone one")
         self.action_type = [spl[0]]
-        new_dict = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}
+        try:
+            new_dict = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}
+        except IndexError:
+            raise RuntimeError("Line '{}' is not formatted properly; action name should be followed by keyword=value "
+                               "pairs, and no spaces should encircle the '=' sign".format(command))
         for par in new_dict:
             if par not in Action.allowed_params[spl[0]]:
                 raise RuntimeError("'{}' is not a valid parameter for action '{}'. Parameters compatible with this "
@@ -528,7 +516,11 @@ class SimultaneousAction(Action):
         actions_count = self.scene.counters[keyword]
         self.scene.counters[keyword] += 1
         spl = self.split_input_line(directive)
-        prm_dict = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}  # TODO catch
+        try:
+            prm_dict = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}
+        except IndexError:
+            raise RuntimeError("Line '{}' is not formatted properly; action name should be followed by keyword=value "
+                               "pairs, and no spaces should encircle the '=' sign".format(directive))
         if 'alias' in prm_dict.keys():
             alias = '_' + prm_dict['alias']
         else:
