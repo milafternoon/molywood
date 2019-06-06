@@ -54,7 +54,8 @@ class Script:
         # at this stage, each scene should have all its initial frames rendered
         graphics_actions.postprocessor(self)
         os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
-                  '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" movie.mp4'.format(self.fps, self.name))
+                  '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" {}.mp4'.format(self.fps,  self.name,
+                                                                                               self.name))
         if not self.keepframes:
             for sc in self.scenes:
                 if '/' in sc.name or '\\' in sc.name or '~' in sc.name:
@@ -75,7 +76,8 @@ class Script:
                                    '(slashes, backslashes, tildes) is prohibited.\n\n'
                                    'Error triggered by: {}'.format(self.name))
             else:
-                os.system('rm {}-[0-9]*.png'.format(self.name))
+                if any([x for x in os.listdir('.') if x.startswith(self.name) and x.endswith('png')]):
+                    os.system('rm {}-[0-9]*.png'.format(self.name))
     
     def show_script(self):
         """
@@ -220,6 +222,10 @@ class Script:
         try:
             self.keepframes = True if self.directives['global']['keepframes'].lower() in ['y', 't', 'yes', 'true'] \
                 else False
+        except KeyError:
+            pass
+        try:
+            self.name = self.directives['global']['name']
         except KeyError:
             pass
         for scene in self.scenes:

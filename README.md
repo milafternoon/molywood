@@ -89,7 +89,7 @@ text_size=... alias=...\])
 + add_overlay (t=...s \[figure=... datafile=... origin=0,0 text=...
 relative_size=1 frames=init_frame:final_frame aspect_ratio=... 2D=t/**f**\]
 textsize=\[24\] sigmoid=\[t/**f**\])
-+ highlight (selection=... t=... \[color=**black** mode=u/d/ud
++ highlight (selection=... t=... \[color=**red** mode=u/d/**ud**
 style=**newcartoon**/licorice/surf/quicksurf alias=...\])
 
 
