@@ -405,11 +405,12 @@ class Action:
         if set(self.action_type).intersection(set(actions_requiring_genfig)):
             graphics_actions.gen_fig(self)
     
-    def parse(self, command):
+    def parse(self, command, ignore=()):
         """
         Parses a single command from the text input
         and converts into action parameters
         :param command: str, description of the action
+        :param ignore: tuple, list of parameters to ignore while parsing
         :return: None
         """
         spl = self.split_input_line(command)
@@ -421,7 +422,8 @@ class Action:
                                "a standalone one")
         self.action_type = [spl[0]]
         try:
-            new_dict = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]}
+            new_dict = {prm.split('=')[0]: prm.split('=')[1].strip("'\"") for prm in spl[1:]
+                        if prm.split('=')[0] not in ignore}
         except IndexError:
             raise RuntimeError("Line '{}' is not formatted properly; action name should be followed by keyword=value "
                                "pairs, and no spaces should encircle the '=' sign".format(command))
@@ -487,7 +489,7 @@ class SimultaneousAction(Action):
         self.transp_changes = {}  # ...and for make_opaque/make_transparent
         super().__init__(scene, description)
         
-    def parse(self, command):
+    def parse(self, command, ignore=()):
         """
         We simply add action parameters to the
         params dict, assuming there will be no
@@ -497,12 +499,15 @@ class SimultaneousAction(Action):
         now - might write a preprocessor later
         to pick up and fix any possible issues
         :param command: str, description of the actions
+        :param ignore: tuple, list of parameters to ignore while parsing
         :return: None
         """
         actions = [comm.strip() for comm in command.split(';')]
+        igns = []  # ones that we don't want to be overwritten in the 'parameters' dict
         for action in actions:
             if action.split()[0] == 'add_overlay':
                 self.parse_many(action, self.overlays, 'overlay')
+                igns.append('figure')
             elif action.split()[0] == 'highlight':
                 self.parse_many(action, self.highlights, 'hl')
             elif action.split()[0] in ['make_transparent', 'make_opaque']:
@@ -513,7 +518,7 @@ class SimultaneousAction(Action):
                                        'add_distance', 'remove_distance']:
                 raise RuntimeError("{} is an instantaneous action (i.e. doesn't last over finite time interval) and "
                                    "cannot be combined with finite-time ones".format(action.split()[0]))
-            super().parse(action)
+            super().parse(action, tuple(igns))
         self.action_type = [action.split()[0] for action in actions]
         if 'zoom_in' in self.action_type and 'zoom_out' in self.action_type:
             raise RuntimeError("actions {} are mutually exclusive".format(", ".join(self.action_type)))
