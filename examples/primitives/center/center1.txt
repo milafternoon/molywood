@@ -1,0 +1,22 @@
+$ global fps=20 draft=f keepframes=f name=center1
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+highlight    selection='resid 410' style=licorice color=name t=1s alias=r410 mode=u
+center_view  selection='resid 410'
+zoom_in      scale=6 t=1s
+zoom_out     scale=6 t=1s
+highlight    t=1s alias=r410 mode=d
+
+highlight    selection='resid 30' style=licorice color=name t=1s alias=r30 mode=u
+center_view  selection='resid 30'
+zoom_in      scale=6 t=1s
+zoom_out     scale=6 t=1s
+highlight    t=1s alias=r30 mode=d
+
+highlight    selection='resid 351' style=licorice color=name t=1s alias=r351 mode=u
+center_view  selection='resid 351'
+zoom_in      scale=6 t=1s
+zoom_out     scale=6 t=1s
+highlight    t=1s alias=r351 mode=d

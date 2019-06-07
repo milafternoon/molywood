@@ -1,0 +1,7 @@
+$ global fps=20 draft=f keepframes=f name=animate1
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+animate frames=0:30 t=1s 
+animate frames=30:80 t=3s smooth=3

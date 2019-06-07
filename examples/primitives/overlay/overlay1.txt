@@ -1,0 +1,14 @@
+$ global fps=20 draft=f keepframes=f name=overlay1
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+{
+ animate      frames=0:40 t=1s;
+ add_overlay  datafile=../../rmsd.dat origin=0,0.6 relative_size=0.4
+}
+{
+ animate      frames=40:80 t=3s;
+ add_overlay  datafile=../../rmsd.dat origin=0,0.6 relative_size=0.4
+}
+

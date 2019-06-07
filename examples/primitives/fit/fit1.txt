@@ -1,0 +1,13 @@
+$ global fps=20 draft=f keepframes=f name=fit1
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+fit_trajectory   selection="resid > 410"
+{
+ rotate          axis=x angle=-90 t=2s;
+ highlight       selection="resid > 410" mode=u;
+ zoom_in         scale=3
+}
+
+animate          frames=0:80 t=3s

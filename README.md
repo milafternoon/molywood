@@ -60,7 +60,9 @@ In general, to run `pyvmd` the following files are needed:
 file; (a) is the preferred way - user may define the representations
 as well as set the camera angle as desired, and then go to File > Save
 Visualization State); in option (b), a default representation is used,
-and a compatible trajectory file can be provided.
+and a compatible trajectory file can be provided. One can only provide
+a four-character `pdb_code=...`, and the structure will be automatically
+downloaded from the PDB database.
 1. a 'movie script', i.e. a simple text file containing directives,
 including a reference to the VMD visualization state (see examples and
 the explanations below).
@@ -104,7 +106,7 @@ indicate defaults when parameters are optional.)
 + layout (\[rows=**1** columns=**1**\])
 + figure (\[files=figure1.png,figure2.png,...\])
 + scene_identifier (\[visualization=... structure=... trajectory=...
-position=**0,0** resolution=**1000,1000**\])
+pdb_code=... position=**0,0** resolution=**1000,1000**\])
 
 (instead of scene_identifier, you should put the actual identifier
 of the scene in question, e.g. `scene_1` in the example below)

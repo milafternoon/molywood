@@ -1,0 +1,14 @@
+$ global fps=20 draft=f keepframes=f name=zoom2
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+{
+ zoom_in scale=3 t=2s;
+ rotate  axis=y angle=320
+}
+
+{
+ zoom_out scale=3 t=2s;
+ rotate  axis=y angle=-320
+}

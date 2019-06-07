@@ -1,0 +1,13 @@
+$ global fps=20 draft=f keepframes=f name=label1
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+add_label        atom_index=6623 label="helix X"
+add_label        atom_index=6322 label="helix Y"
+highlight        selection="resid 404 to 410 414 to 440" color=green t=2s mode=u
+{
+ rotate          axis=y angle=-60 t=2s;
+ rotate          axis=x angle=-60;
+ zoom_in         scale=2
+}

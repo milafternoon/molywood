@@ -197,7 +197,21 @@ class Script:
                     try:
                         struct = self.directives[sub]['structure']
                     except KeyError:
-                        pass
+                        try:
+                            pdb = self.directives[sub]['pdb_code']
+                        except KeyError:
+                            pass
+                        else:
+                            pdb = pdb.upper()
+                            if os.system('which wget') == 0:
+                                result = os.system('wget https://files.rcsb.org/download/{}.pdb'.format(pdb))
+                            elif os.system('which curl') == 0:
+                                result = os.system('curl -O https://files.rcsb.org/download/{}.pdb'.format(pdb))
+                            else:
+                                raise RuntimeError("You need wget or curl to directly download PDB files")
+                            if result != 0:
+                                raise RuntimeError("Download failed, check your PDB code and internet connection")
+                            struct = '{}.pdb'.format(pdb)
                     else:
                         struct = self.check_path(struct)
                     try:
@@ -366,9 +380,9 @@ class Action:
                       'rotate': {'angle', 'axis', 't', 'sigmoid'},
                       'zoom_in': {'scale', 't', 'sigmoid'},
                       'zoom_out': {'scale', 't', 'sigmoid'},
-                      'make_transparent': {'material', 't', 'sigmoid'},
+                      'make_transparent': {'material', 't', 'sigmoid', 'limit', 'start'},
                       'highlight': {'selection', 't', 'color', 'mode', 'style', 'alias'},
-                      'make_opaque': {'material', 't', 'sigmoid'},
+                      'make_opaque': {'material', 't', 'sigmoid', 'limit', 'start'},
                       'center_view': {'selection'},
                       'show_figure': {'figure', 't', 'datafile', 'dataframes'},
                       'add_overlay': {'figure', 't', 'origin', 'relative_size', 'dataframes',

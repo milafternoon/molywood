@@ -1,0 +1,16 @@
+$ global fps=20 draft=f keepframes=f name=highlight2
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+highlight  selection='resid > 410' color=green t=1s alias=helix mode=u
+{
+ rotate    axis=x angle=-90 t=1s;
+ zoom_in   scale=2
+}
+highlight  selection='resid 432 429' color=name style=licorice t=2s
+{
+ rotate    axis=x angle=90 t=1s;
+ zoom_out  scale=2
+}
+highlight  alias=helix mode=d t=1s

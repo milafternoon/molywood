@@ -1,0 +1,12 @@
+$ global fps=20 draft=f keepframes=f name=transparency1
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+{
+ rotate            axis=y angle=-50 t=1s;
+ zoom_in           scale=3
+}
+
+make_transparent   material=Diffuse t=2s
+make_opaque        material=Diffuse t=2s

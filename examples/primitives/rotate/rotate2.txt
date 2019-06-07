@@ -1,0 +1,20 @@
+$ global fps=20 draft=f keepframes=f name=rotate2
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+{
+ rotate  axis=y angle=90 t=2s;
+ rotate  axis=z angle=90
+}
+
+{
+ rotate  axis=x angle=60 t=2s;
+ rotate  axis=z angle=120
+}
+
+{
+ rotate  axis=x angle=45 t=2s;
+ rotate  axis=y angle=-120
+}
+

@@ -1,0 +1,10 @@
+$ global fps=20 draft=t keepframes=f name=overlay5
+$ scene1 resolution=750,750
+
+# scene1
+
+{
+ show_figure  figure=../../logo.png t=2s;
+ add_overlay  text="frame number []" origin=0.35,0.75 textsize=40 dataframes=1:40
+}
+

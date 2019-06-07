@@ -1,0 +1,13 @@
+$ global fps=20 draft=f keepframes=f name=center2
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+rotate       axis=x angle=-90 t=1s
+rotate       axis=x angle=90 t=1s
+center_view  selection='resid 30'
+rotate       axis=x angle=-90 t=1s
+rotate       axis=x angle=90 t=1s
+center_view  selection='resid 342'
+rotate       axis=y angle=-90 t=1s
+rotate       axis=y angle=90 t=1s

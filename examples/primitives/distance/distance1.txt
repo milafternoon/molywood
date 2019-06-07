@@ -1,0 +1,17 @@
+$ global fps=20 draft=t keepframes=f name=distance1
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+{
+ rotate           axis=x angle=-90 t=2s;
+ highlight        selection="resid > 410" mode=u color=green;
+ highlight        selection="resid > 410" style=licorice color=name mode=u;
+ make_transparent material=Diffuse;
+ zoom_in          scale=3
+}
+
+add_distance      selection1='resid 429 and name CE' selection2='resid 432 and name CD' text_size=2 label_color=orange
+animate           frames=0:40 t=2s
+remove_distance   all=t
+animate           frames=40:80 t=2s

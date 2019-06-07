@@ -149,7 +149,7 @@ def gen_setup(action):
             pass
         else:
             check_if_convertible(smooth, int, 'smooth')
-            setups['ani'] = 'set mtop [molinfo top]\nset nrep [molinfo $mtop get numreps]\n' \
+            setups['ani'] = 'foreach nmol [molinfo list] {{\nset nrep [molinfo $nmol get numreps]\n' \
                             'for {{set i 0}} {{$i < $nrep}} {{incr i}} {{\n' \
                             'mol smoothrep $mtop $i {}\n}}\n'.format(smooth)  # TODO smooth for all mols (distances?)
     if 'add_label' in action.action_type:
@@ -220,7 +220,7 @@ def gen_setup(action):
             alias = 'label{}'.format(len(action.scene.labels['Bonds'])+1)
         action.scene.labels['Bonds'].append(alias)
         sel1 = action.parameters['selection1']
-        sel2 = action.parameters['selection2']
+        sel2 = action.parameters['selection2']  # TODO might not work with display none?
         setups['add'] = 'save_vp 1\n'
         setups['add'] += 'proc geom_center {selection} {\n    set gc [veczero]\n' \
                          '    foreach coord [$selection get {x y z}] {\n       set gc [vecadd $gc $coord]}\n    ' \
@@ -239,7 +239,7 @@ def gen_setup(action):
                          '  $sel set {{x y z}} [list [geom_center $ssel]]\n  set ssel [atomselect 0 "{}"]\n' \
                          '  set sel [atomselect $molind "index 1"]\n  $sel set {{x y z}} [list [geom_center $ssel]]\n' \
                          '}}\n\nreposition_dummies $newmol{}\n\n'.format(sel1, sel2, alias)
-        setups['add'] += 'display resetview\n'  # TODO check why is lagging by 1 frame?
+        setups['add'] += 'display resetview\n'
         setups['add'] += 'retr_vp 1\n'  # re-align all after display resetview
     if 'highlight' in action.action_type:
         colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
@@ -260,10 +260,11 @@ def gen_setup(action):
             except KeyError:
                 style = 'newcartoon'
             style_params = {'newcartoon': ['NewCartoon', '0.32 20 4.1 0'], 'surf': ['Surf', '1.4 0.0'],
-                            'quicksurf': ['QuickSurf', '1.05 1.3 0.5 3.0'], 'licorice': ['Licorice', '0.31 12.0 12.0']}
+                            'quicksurf': ['QuickSurf', '1.05 1.3 0.5 3.0'], 'licorice': ['Licorice', '0.31 12.0 12.0'],
+                            'vdw': ['VDW', '1.05 20.0'], 'tube': ['Tube', '0.40 20.0']}
             if style not in style_params.keys():
-                raise RuntimeError('{} is not a valid style; "NewCartoon", "Surf", "QuickSurf" and "Licorice" are '
-                                   'available'.format(style))
+                raise RuntimeError('{} is not a valid style; "NewCartoon", "Surf", "QuickSurf", "VDW", "Tube" '
+                                   'and "Licorice" are available'.format(style))
             if color_key in colors.keys():
                 cl = 'ColorID {}'.format(colors[color_key])
             else:
@@ -334,17 +335,28 @@ def gen_iterators(action):
         iterators['zou'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
         for t_ch in action.transp_changes.keys():
+            try:
+                until = action.parameters['limit']
+            except KeyError:
+                until = 0 if 'transparent' in t_ch else 1
+            else:
+                check_if_convertible(until, float, 'limit')
+                until = float(until)
+            try:
+                start = action.parameters['start']
+            except KeyError:
+                start = 1 if 'transparent' in t_ch else 0
+            else:
+                check_if_convertible(start, float, 'start')
+                start = float(start)
             sigmoid, sls, abruptness = check_sigmoid(action.transp_changes[t_ch])
             if sigmoid:
                 if 'transparent' in t_ch:
-                    arr = 1 - np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
+                    arr = start - np.cumsum(sigmoid_norm_sum(start-until, action.framenum, abruptness))
                 else:
-                    arr = np.cumsum(sigmoid_norm_sum(1, action.framenum, abruptness))
+                    arr = start + np.cumsum(sigmoid_norm_sum(until-start, action.framenum, abruptness))
             else:
-                if 'transparent' in t_ch:
-                    arr = np.linspace(1, 0, action.framenum)
-                else:
-                    arr = np.linspace(0, 1, action.framenum)
+                arr = np.linspace(start, until, action.framenum)
             iterators[t_ch] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'animate' in action.action_type:
         animation_frames = [x for x in action.parameters['frames'].split(':')]
@@ -399,11 +411,10 @@ def gen_command(action):
     elif 'zoom_out' in action.action_type:
         commands['zou'] = "set t [lindex $zou $i]\n  scale by $t\n"
     if 'animate' in action.action_type:
-        commands['ani'] = ''
+        commands['ani'] = "set t [lindex $ani $i]\n  animate goto $t\n"
         if len(action.scene.labels['Bonds']) > 0:
             for alias in action.scene.labels['Bonds']:
                 commands['ani'] += 'reposition_dummies $newmol{}\n'.format(alias)
-        commands['ani'] += "set t [lindex $ani $i]\n  animate goto $t\n"
     if 'highlight' in action.action_type:
         hls = [action.highlights[x] for x in action.highlights.keys()]
         hl_labels = list(action.highlights.keys())

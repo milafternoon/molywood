@@ -1,0 +1,17 @@
+$ global fps=20 draft=f keepframes=f name=overlay2
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+{
+ animate      frames=0:20 t=1s;
+ add_overlay  figure=../../logo.png relative_size=0.25
+}
+{
+ animate      frames=20:40 t=1s;
+ add_overlay  figure=../../logo.png relative_size=0.45 origin=0.55,0.55
+}
+{
+ animate      frames=40:80 t=2s;
+ add_overlay  figure=../../logo.png relative_size=0.6 origin=0.2,0.2 sigmoid=t
+}

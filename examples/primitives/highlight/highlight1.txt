@@ -1,0 +1,8 @@
+$ global fps=20 draft=f keepframes=f name=highlight1
+$ scene1 visualization=../tubulin.vmd resolution=750,750
+
+# scene1
+
+highlight  selection='protein' style=quicksurf color=white t=2s
+highlight  selection='resname ASP GLU' style=licorice t=2s
+highlight  selection='resid > 410' color=green t=2s

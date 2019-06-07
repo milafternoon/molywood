@@ -1,0 +1,21 @@
+$ global fps=20 draft=f keepframes=f name=animate2
+$ layout columns=2 rows=1
+$ scene1 visualization=../tubulin.vmd resolution=750,750 position=0,0
+$ scene2 visualization=../tubulin.vmd resolution=750,750 position=0,1
+
+# scene1
+
+{
+ rotate  axis=y angle=-50 t=1s;
+ zoom_in scale=2
+}
+animate frames=0:40 t=3s smooth=2
+
+# scene2
+
+{
+ rotate  axis=y angle=-50 t=1s;
+ zoom_in scale=2
+}
+animate frames=40:80 t=3s smooth=2
+
