@@ -6,6 +6,6 @@ $ scene_1         position=0,0 resolution=500,500
 # scene_1
 
 { show_figure      t=2s figure=logo_big.png;
-  add_overlay      datafile=rmsd.dat origin=0.25,0.35 relative_size=0.35 frames=0:20;
+  add_overlay      datafile=rmsd.dat origin=0.25,0.35 relative_size=0.35 dataframes=0:20;
   add_overlay      datafile=rmsd.dat origin=0.75,0.75 relative_size=0.25 }
 

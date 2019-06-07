@@ -237,7 +237,7 @@ def data_simple_plot(action, datafile, basename):
     else:
         ymin, ymax = mpl_kw['ylim']
     try:
-        animation_frames = [int(x) for x in action.overlays[basename]['frames'].split(':')]
+        animation_frames = [int(x) for x in action.overlays[basename]['dataframes'].split(':')]
         arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum).astype(int)
     except KeyError:
         try:

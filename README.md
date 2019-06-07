@@ -84,10 +84,10 @@ text_size=... alias=...\])
 + rotate (axis=x/y/z angle=... t=...s \[sigmoid=**t**/f/sls\])
 + zoom_in/zoom_out (scale=... t=...s \[sigmoid=**t**/f/sls\])
 + make_transparent/make_opaque (material=... t=...s  \[sigmoid=**t**/f/sls\])
-+ show_figure (t=...s \[figure=... datafile=...\])
++ show_figure (t=...s \[figure=... datafile=... dataframes=init_frame:final_frame\])
 + do_nothing (t=...s)
 + add_overlay (t=...s \[figure=... datafile=... origin=0,0 text=...
-relative_size=1 frames=init_frame:final_frame aspect_ratio=... 2D=t/**f**\]
+relative_size=1 dataframes=init_frame:final_frame aspect_ratio=... 2D=t/**f**\]
 textsize=\[24\] sigmoid=\[t/**f**\])
 + highlight (selection=... t=... \[color=**red** mode=u/d/**ud**
 style=**newcartoon**/licorice/surf/quicksurf alias=...\])
@@ -210,12 +210,14 @@ linear-smooth transition (preferable for e.g. multiple full rotations)
     through `figure_index`), an on-the-fly  generated matplotlib line
     plot (based on a data file speficied with the `datafile` parameter)
     or plain text.
-    + If `frames=...` and `datafile=...` are simultaneously specified,
-     a dot will dynamically follow the values on the plot. If `frames`
-     is supplied with `animate` only, the same datapoint indices will
-     be used for the movie and the plot. If `frames` is supplied
-     to both, selection of simulation frames and data points can be
-     made independent.
+    + If `datafile=...` is specified, a dot will dynamically follow the
+     values on the plot. By default, the script will try to use `frames`
+     from the accompanying `animate` action to select datapoint indices
+     from the `datafile`. To independently select datapoint indices for
+     the 1D plot (e.g. when the `datafile` has much more entries than
+     the trajectory used in `animate`, one can supply `datafile=...`
+     with `dataframes=...` - it will take precendence over `animate`'s
+     `frames`.
     + If the  data file starts with a single line formatted as
     `# x axis label; y axis label`, `x axis label` and `y axis label`
     will be used to label the corresponding axes of the plot.

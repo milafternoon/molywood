@@ -108,11 +108,15 @@ class Script:
                 master_setup.append(line.strip('$').strip())
             elif line:  # regular content of subscript
                 if line.startswith('{'):  # with a possibility of multi-actions wrapped into curly brackets
-                    multiline = line
+                    multiline = ' ' + line
                 elif multiline and '}' not in line:
-                    multiline += line
+                    multiline += ' ' + line
                 elif multiline and '}' in line:
-                    subscripts[current_sub].append(multiline + line)
+                    multiline += ' ' + line
+                    for act in multiline.strip('\{\} ').split(';'):
+                        if not all(len(x.split('=')) == 2 for x in Action.split_input_line(act)[1:]):
+                            raise RuntimeError("Have you forgotten to add a semicolon in action: \n\n{}?\n".format(act))
+                    subscripts[current_sub].append(multiline)
                     multiline = None
                 else:
                     subscripts[current_sub].append(line)
@@ -274,10 +278,10 @@ class Scene:
         :param description: str, description of the action
         :return: None
         """
-        if not description.startswith('{'):
+        if not description.strip().startswith('{'):
             self.actions.append(Action(self, description))
         else:
-            self.actions.append(SimultaneousAction(self, description.strip('{}')))
+            self.actions.append(SimultaneousAction(self, description.strip('{} ')))
 
     def show_script(self):
         """
@@ -363,8 +367,8 @@ class Action:
                       'highlight': {'selection', 't', 'color', 'mode', 'style', 'alias'},
                       'make_opaque': {'material', 't', 'sigmoid'},
                       'center_view': {'selection'},  # TODO look for missing semicolons
-                      'show_figure': {'figure', 't', 'datafile'},  # TODO check that add_overlay does not shadow sh_fig
-                      'add_overlay': {'figure', 't', 'origin', 'relative_size', 'frames',
+                      'show_figure': {'figure', 't', 'datafile', 'dataframes'},
+                      'add_overlay': {'figure', 't', 'origin', 'relative_size', 'dataframes',
                                       'aspect_ratio', 'datafile', '2D', 'text', 'textsize', 'sigmoid'},
                       'add_label': {'label_color', 'atom_index', 'label', 'text_size', 'alias'},
                       'remove_label': {'alias', 'all'},
@@ -561,5 +565,5 @@ if __name__ == "__main__":
                         with open('script_{}.tcl'.format(sscene.name), 'w') as sout:
                             sout.write(stcl_script)
             else:
-                print("Warning: parameters beyond the first will be ignored\n\n")
+                print("\n\nWarning: parameters beyond the first will be ignored\n\n")
                 scr.render()
