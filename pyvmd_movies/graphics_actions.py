@@ -113,7 +113,7 @@ def gen_fig(action):
                     fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
                     os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, fig_file))
             elif 'text' in action.overlays[ovl].keys():
-                text = action.overlays[ovl]['text']
+                text = action.overlays[ovl]['text']  # TODO enable numerical ranges
                 try:
                     tsize = int(action.overlays[ovl]['textsize'])
                 except KeyError:
@@ -199,7 +199,7 @@ def data_simple_plot(action, datafile, basename):
     :return: None
     """
     import matplotlib.pyplot as plt
-    font = {'size': 22}
+    font = {'size': 18}
     plt.rc('font', **font)
     plt.rc('axes', linewidth=2)
     res = action.scene.resolution
@@ -264,6 +264,6 @@ def data_simple_plot(action, datafile, basename):
             plt.scatter(data[arr[count], 0], data[arr[count], 1], c='r', s=250, zorder=1)
         plt.xlabel(labels[0])
         plt.ylabel(labels[1])
-        plt.subplots_adjust(left=0.18, right=0.97, top=0.97, bottom=0.18)
+        plt.subplots_adjust(left=0.22, right=0.97, top=0.97, bottom=0.18)
         plt.savefig('{}-{}-{}.png'.format(basename, action.scene.name, fr))
         plt.clf()

@@ -221,6 +221,7 @@ def gen_setup(action):
         action.scene.labels['Bonds'].append(alias)
         sel1 = action.parameters['selection1']
         sel2 = action.parameters['selection2']
+        setups['add'] += 'save_vp 1\n'
         setups['add'] = 'proc geom_center {selection} {\n    set gc [veczero]\n' \
                         '    foreach coord [$selection get {x y z}] {\n       set gc [vecadd $gc $coord]}\n    ' \
                         'return [vecscale [expr 1.0 /[$selection num]] $gc]}\n\n'
@@ -233,12 +234,8 @@ def gen_setup(action):
                          '  $sel set {{x y z}} [list [geom_center $ssel]]\n  set ssel [atomselect 0 "{}"]\n' \
                          '  set sel [atomselect $molind "index 1"]\n  $sel set {{x y z}} [list [geom_center $ssel]]\n' \
                          '}}\n\nreposition_dummies $newmol{}\n\n'.format(sel1, sel2, alias)
-        if action.scene.visualization:  # re-align all after display resetview
-            setups['add'] += 'display resetview\n'
-            setups['add'] += 'molinfo 0 set {center_matrix rotate_matrix scale_matrix global_matrix} $viewpoints(0)\n'
-            for ali in action.scene.labels['Bonds']:
-                setups['add'] += 'molinfo $newmol{} set {{center_matrix rotate_matrix ' \
-                                 'scale_matrix global_matrix}} $viewpoints(0)\n\n'.format(ali)
+        setups['add'] += 'display resetview\n'
+        setups['add'] += 'retrieve_vp 1\n'  # re-align all after display resetview
     if 'highlight' in action.action_type:
         colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
         hls = [action.highlights[x] for x in action.highlights.keys()]
@@ -282,7 +279,7 @@ def gen_setup(action):
                               'mol material $mat{}\nmol selection {{{}}}\n' \
                               'mol addrep top\n'.format(*style_params[style], cl, lb, sel)
     if 'fit_trajectory' in action.action_type:
-        sel = action.parameters['selection']
+        sel = action.parameters['selection']  # TODO smoothly transition current frame?
         setups['fit'] = 'set fit_reference [atomselect top "{}" frame 0]\nset fit_compare [atomselect top "{}"]\n' \
                         'set fit_system [atomselect top "all"]\nset num_steps [molinfo top get numframes]\n' \
                         'for {{set frame 0}} {{$frame < $num_steps}} {{incr frame}} {{\n' \

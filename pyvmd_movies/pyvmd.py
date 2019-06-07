@@ -362,10 +362,10 @@ class Action:
                       'make_transparent': {'material', 't', 'sigmoid'},
                       'highlight': {'selection', 't', 'color', 'mode', 'style', 'alias'},
                       'make_opaque': {'material', 't', 'sigmoid'},
-                      'center_view': {'selection'},
+                      'center_view': {'selection'},  # TODO look for missing semicolons
                       'show_figure': {'figure', 't', 'datafile'},  # TODO check that add_overlay does not shadow sh_fig
                       'add_overlay': {'figure', 't', 'origin', 'relative_size', 'frames',
-                                      'aspect_ratio', 'datafile', '2D', 'text', 'textsize'},
+                                      'aspect_ratio', 'datafile', '2D', 'text', 'textsize', 'sigmoid'},
                       'add_label': {'label_color', 'atom_index', 'label', 'text_size', 'alias'},
                       'remove_label': {'alias', 'all'},
                       'add_distance': {'selection1', 'selection2', 'label_color', 'text_size', 'alias'},
