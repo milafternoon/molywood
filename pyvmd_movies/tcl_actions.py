@@ -110,16 +110,20 @@ def gen_loop(action):
         code += 'set {} [list {}]\n'.format(act, iterators[act])
     if action.framenum > 0:
         code += 'for {{set i 0}} {{$i < {}}} {{incr i}} {{\n'.format(action.framenum)
-        code += '  puts "rendering frame: $fr"\n'
         for act in command.keys():
             code = code + '  ' + command[act]
-        if action.scene.script.draft:
-            code += '  render snapshot {sc}-$fr.tga\n  incr fr\n}}'.format(sc=action.scene.name)
+        if action.scene.script.do_render:
+            code += '  puts "rendering frame: $fr"\n'
+            if action.scene.script.draft:
+                code += '  render snapshot {sc}-$fr.tga\n'.format(sc=action.scene.name)
+            else:
+                code += '  render Tachyon {sc}-$fr.dat\n  \"$env(TACHYON_BIN)\" ' \
+                        '-aasamples 12 {sc}-$fr.dat -format TARGA -o {sc}-$fr.tga -res {rs}' \
+                        '\n'.format(sc=action.scene.name, rs=' '.join(str(x) for x in action.scene.resolution),
+                                    tc=action.scene.tachyon)
         else:
-            code += '  render Tachyon {sc}-$fr.dat\n  \"$env(TACHYON_BIN)\" ' \
-                    '-aasamples 12 {sc}-$fr.dat -format TARGA -o {sc}-$fr.tga -res {rs}' \
-                    '\n  incr fr\n}}'.format(sc=action.scene.name, rs=' '.join(str(x) for x in action.scene.resolution),
-                                             tc=action.scene.tachyon)
+            code += '  puts "frame: $fr"\n  after {}\n  display update\n'.format(str(int(1000/action.scene.script.fps)))
+        code += '  incr fr\n}\n'
     return code
 
 

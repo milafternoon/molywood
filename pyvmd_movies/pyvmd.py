@@ -16,8 +16,9 @@ class Script:
     panels, overlays etc.)
     """
     allowed_globals = ['global', 'layout']
-    allowed_params = {'global': ['fps', 'keepframes', 'draft', 'name'],
-                      'layout': ['columns', 'rows']}
+    allowed_params = {'global': ['fps', 'keepframes', 'draft', 'name', 'render'],
+                      'layout': ['columns', 'rows'],
+                      '_default': ['visualization', 'structure', 'trajectory', 'position', 'resolution', 'pdb_code']}
     
     def __init__(self, scriptfile=None):
         self.name = 'movie'
@@ -25,6 +26,7 @@ class Script:
         self.directives = {}
         self.fps = 20
         self.draft = False
+        self.do_render = True
         self.keepframes = True
         self.scriptfile = scriptfile
         if self.scriptfile:
@@ -44,18 +46,22 @@ class Script:
                 with open('script_{}.tcl'.format(scene.name), 'w') as out:
                     out.write(tcl_script)
                 ddev = '-dispdev none' if not self.draft else ''
+                if not self.do_render and not self.draft:
+                    raise RuntimeError("render=false is only compatible with draft=true")
                 os.system('vmd {} -e script_{}.tcl -startup ""'.format(ddev, scene.name))
-                os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); '
-                          'rm $i; done'.format(scene.name))
+                if self.do_render:
+                    os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); '
+                              'rm $i; done'.format(scene.name))
                 if not self.draft:
                     os.system('for i in $(ls {}-*png); do rm $(echo $i | sed "s/png/dat/g"); done'.format(scene.name))
             for action in scene.actions:
                 action.generate_graph()  # here we generate matplotlib figs on-the-fly
         # at this stage, each scene should have all its initial frames rendered
-        graphics_actions.postprocessor(self)
-        os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
-                  '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" {}.mp4'.format(self.fps,  self.name,
-                                                                                               self.name))
+        if self.do_render:
+            graphics_actions.postprocessor(self)
+            os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
+                      '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" {}.mp4'.format(self.fps,  self.name,
+                                                                                                   self.name))
         if not self.keepframes:
             for sc in self.scenes:
                 if '/' in sc.name or '\\' in sc.name or '~' in sc.name:
@@ -127,7 +133,7 @@ class Script:
             raise RuntimeError("Error: not all curly brackets {} were closed, revise your input")
         Script.allowed_globals.extend(list(subscripts.keys()))
         for sc in subscripts.keys():
-            Script.allowed_params[sc] = ['visualization', 'structure', 'trajectory', 'position', 'resolution']
+            Script.allowed_params[sc] = Script.allowed_params['_default']
         self.directives = self.parse_directives(master_setup)
         self.scenes = self.parse_scenes(subscripts)
         self.prepare()
@@ -203,14 +209,15 @@ class Script:
                             pass
                         else:
                             pdb = pdb.upper()
-                            if os.system('which wget') == 0:
-                                result = os.system('wget https://files.rcsb.org/download/{}.pdb'.format(pdb))
-                            elif os.system('which curl') == 0:
-                                result = os.system('curl -O https://files.rcsb.org/download/{}.pdb'.format(pdb))
-                            else:
-                                raise RuntimeError("You need wget or curl to directly download PDB files")
-                            if result != 0:
-                                raise RuntimeError("Download failed, check your PDB code and internet connection")
+                            if not pdb.upper() + '.pdb' in os.listdir('.'):
+                                if os.system('which wget') == 0:
+                                    result = os.system('wget https://files.rcsb.org/download/{}.pdb'.format(pdb))
+                                elif os.system('which curl') == 0:
+                                    result = os.system('curl -O https://files.rcsb.org/download/{}.pdb'.format(pdb))
+                                else:
+                                    raise RuntimeError("You need wget or curl to directly download PDB files")
+                                if result != 0:
+                                    raise RuntimeError("Download failed, check your PDB code and internet connection")
                             struct = '{}.pdb'.format(pdb)
                     else:
                         struct = self.check_path(struct)
@@ -238,6 +245,10 @@ class Script:
             pass
         try:
             self.draft = True if self.directives['global']['draft'].lower() in ['y', 't', 'yes', 'true'] else False
+        except KeyError:
+            pass
+        try:
+            self.do_render = False if self.directives['global']['render'].lower() in ['n', 'f', 'no', 'false'] else True
         except KeyError:
             pass
         try:
