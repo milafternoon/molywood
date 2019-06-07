@@ -101,6 +101,9 @@ class Script:
         multiline = None
         master_setup = []
         for line in script:
+            excl = line.find('!')
+            if excl > 0:
+                line = line[:excl].strip()
             if line.startswith('#'):  # beginning of a subscript
                 current_sub = line.strip('#').strip()
                 subscripts[current_sub] = []
@@ -175,7 +178,7 @@ class Script:
                 if sub in self.directives.keys():
                     try:
                         tcl = self.directives[sub]['visualization']  # TODO use rel path when abs is not found
-                    except KeyError:  # TODO test two_panel with conda active; maybe add 1s delay?
+                    except KeyError:
                         pass
                     else:
                         tcl = self.check_path(tcl)
@@ -322,7 +325,7 @@ class Scene:
             self.run_vmd = True
             if self.visualization:
                 code = [line for line in open(self.visualization, 'r').readlines() if not line.startswith('#')]
-                code = ''.join(code)
+                code = ''.join(code)  # TODO maybe add 1s delay?
             else:
                 code = 'mol new {} type {} first 0 last -1 step 1 filebonds 1 ' \
                        'autobonds 1 waitfor all\n'.format(self.structure, self.structure.split('.')[-1])
@@ -366,7 +369,7 @@ class Action:
                       'make_transparent': {'material', 't', 'sigmoid'},
                       'highlight': {'selection', 't', 'color', 'mode', 'style', 'alias'},
                       'make_opaque': {'material', 't', 'sigmoid'},
-                      'center_view': {'selection'},  # TODO look for missing semicolons
+                      'center_view': {'selection'},
                       'show_figure': {'figure', 't', 'datafile', 'dataframes'},
                       'add_overlay': {'figure', 't', 'origin', 'relative_size', 'dataframes',
                                       'aspect_ratio', 'datafile', '2D', 'text', 'textsize', 'sigmoid'},

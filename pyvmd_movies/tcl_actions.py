@@ -221,10 +221,10 @@ def gen_setup(action):
         action.scene.labels['Bonds'].append(alias)
         sel1 = action.parameters['selection1']
         sel2 = action.parameters['selection2']
-        setups['add'] += 'save_vp 1\n'
-        setups['add'] = 'proc geom_center {selection} {\n    set gc [veczero]\n' \
-                        '    foreach coord [$selection get {x y z}] {\n       set gc [vecadd $gc $coord]}\n    ' \
-                        'return [vecscale [expr 1.0 /[$selection num]] $gc]}\n\n'
+        setups['add'] = 'save_vp 1\n'
+        setups['add'] += 'proc geom_center {selection} {\n    set gc [veczero]\n' \
+                         '    foreach coord [$selection get {x y z}] {\n       set gc [vecadd $gc $coord]}\n    ' \
+                         'return [vecscale [expr 1.0 /[$selection num]] $gc]}\n\n'
         setups['add'] += 'set newmol{} [mol new atoms 2]\nmol representation Lines\nmol selection all\n' \
                          'mol addrep $newmol{}\nlabel add Bonds 1/0 1/1\ncolor Labels Bonds {}\n' \
                          'label textsize {}\nlabel textthickness 3\nmol top 0\n\n'.format(alias, alias, label_color,

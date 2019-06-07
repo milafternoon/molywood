@@ -4,14 +4,14 @@ $ scene_1         visualization=vis.vmd  position=0,0 resolution=500,500
 $ scene_2         position=0,1 resolution=500,500
 
 
-# scene_1
+# scene_1   ! let's just check if the comments work
 
-zoom_in           t=2s scale=1.5
+zoom_in           t=2s scale=1.5  ! more comments
 rotate            t=4s angle=360 axis=z sigmoid='sls'
 center_view       selection='resid 155 159'
 {
  zoom_in          scale=2;
- rotate           t=2s angle=-90 axis=y
+ rotate           t=2s angle=-90 axis=y ! and more
 }
 animate           t=5s frames=0:80 smooth=3
 {

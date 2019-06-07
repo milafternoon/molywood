@@ -113,16 +113,22 @@ def gen_fig(action):
                     fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
                     os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, fig_file))
             elif 'text' in action.overlays[ovl].keys():
-                text = action.overlays[ovl]['text']  # TODO enable numerical ranges
+                text = action.overlays[ovl]['text']
                 try:
                     tsize = int(action.overlays[ovl]['textsize'])
                 except KeyError:
                     tsize = 24
+                try:
+                    animation_frames = [float(x) for x in action.overlays[ovl]['dataframes'].split(':')]
+                    arr = np.linspace(animation_frames[0], animation_frames[1], action.framenum)
+                except KeyError:
+                    arr = np.arange(action.framenum)
                 for fr in frames:
+                    newtext = text.replace('[]', '{:.3f}').format(arr[fr-action.initframe])
                     fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
                     os.system('convert -size {}x{} xc:transparent -font "AvantGarde-Book" -pointsize {} '
                               '-gravity SouthWest -fill black -annotate +0+0 "{}" '
-                              '{}'.format(*res, tsize, text, fig_file))
+                              '{}'.format(*res, tsize, newtext, fig_file))
                 
 
 def equalize_frames(script):

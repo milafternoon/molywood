@@ -3,6 +3,8 @@ from pyvmd_movies import *
 import os
 
 examples = ['../examples/' + x for x in os.listdir('../examples') if os.path.isdir('../examples/' + x)]
+examples += ['../examples/primitives/' + x for x in os.listdir('../examples/primitives/')
+             if os.path.isdir('../examples/primitives/' + x)]
 
 for ex in examples:
     txt_files = [x for x in os.listdir(ex) if x.endswith('txt')]
