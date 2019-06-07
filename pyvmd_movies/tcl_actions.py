@@ -151,7 +151,7 @@ def gen_setup(action):
             check_if_convertible(smooth, int, 'smooth')
             setups['ani'] = 'set mtop [molinfo top]\nset nrep [molinfo $mtop get numreps]\n' \
                             'for {{set i 0}} {{$i < $nrep}} {{incr i}} {{\n' \
-                            'mol smoothrep $mtop $i {}\n}}\n'.format(smooth)
+                            'mol smoothrep $mtop $i {}\n}}\n'.format(smooth)  # TODO smooth for all mols (distances?)
     if 'add_label' in action.action_type:
         try:
             label_color = action.parameters['label_color']
@@ -225,6 +225,11 @@ def gen_setup(action):
         setups['add'] += 'proc geom_center {selection} {\n    set gc [veczero]\n' \
                          '    foreach coord [$selection get {x y z}] {\n       set gc [vecadd $gc $coord]}\n    ' \
                          'return [vecscale [expr 1.0 /[$selection num]] $gc]}\n\n'
+        setups['add'] += 'proc retr_vp {view_num} {\n  global viewpoints  \n  foreach mol [molinfo list] {\n' \
+                         '    molinfo $mol set rotate_matrix   $viewpoints($view_num,0,0)' \
+                         '\n    molinfo $mol set center_matrix   $viewpoints($view_num,0,1)' \
+                         '\n    molinfo $mol set scale_matrix   $viewpoints($view_num,0,2)' \
+                         '\n    molinfo $mol set global_matrix   $viewpoints($view_num,0,3)\n  }\n}\n\n'
         setups['add'] += 'set newmol{} [mol new atoms 2]\nmol representation Lines\nmol selection all\n' \
                          'mol addrep $newmol{}\nlabel add Bonds 1/0 1/1\ncolor Labels Bonds {}\n' \
                          'label textsize {}\nlabel textthickness 3\nmol top 0\n\n'.format(alias, alias, label_color,
@@ -234,8 +239,8 @@ def gen_setup(action):
                          '  $sel set {{x y z}} [list [geom_center $ssel]]\n  set ssel [atomselect 0 "{}"]\n' \
                          '  set sel [atomselect $molind "index 1"]\n  $sel set {{x y z}} [list [geom_center $ssel]]\n' \
                          '}}\n\nreposition_dummies $newmol{}\n\n'.format(sel1, sel2, alias)
-        setups['add'] += 'display resetview\n'
-        setups['add'] += 'retrieve_vp 1\n'  # re-align all after display resetview
+        setups['add'] += 'display resetview\n'  # TODO check why is lagging by 1 frame?
+        setups['add'] += 'retr_vp 1\n'  # re-align all after display resetview
     if 'highlight' in action.action_type:
         colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
         hls = [action.highlights[x] for x in action.highlights.keys()]
