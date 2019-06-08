@@ -225,7 +225,7 @@ def gen_setup(action):
         action.scene.labels['Bonds'].append(alias)
         sel1 = action.parameters['selection1']
         sel2 = action.parameters['selection2']
-        setups['add'] = 'package require viewchangerender\nsave_vp 1\n'
+        setups['add'] = 'package require multiseq\nsave_vp 1\n'
         setups['add'] += 'proc geom_center {selection} {\n    set gc [veczero]\n' \
                          '    foreach coord [$selection get {x y z}] {\n       set gc [vecadd $gc $coord]}\n    ' \
                          'return [vecscale [expr 1.0 /[$selection num]] $gc]}\n\n'
