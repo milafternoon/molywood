@@ -108,7 +108,7 @@ class Script:
         master_setup = []
         for line in script:
             excl = line.find('!')
-            if excl > 0:
+            if excl >= 0:
                 line = line[:excl].strip()
             if line.startswith('#'):  # beginning of a subscript
                 current_sub = line.strip('#').strip()
@@ -183,11 +183,12 @@ class Script:
             if scenes[sub]:
                 if sub in self.directives.keys():
                     try:
-                        tcl = self.directives[sub]['visualization']  # TODO use rel path when abs is not found
+                        tcl = self.directives[sub]['visualization']
                     except KeyError:
                         pass
                     else:
                         tcl = self.check_path(tcl)
+                        tcl = self.check_tcl(tcl)
                     try:
                         pos = [int(x) for x in self.directives[sub]['position'].split(',')]
                     except KeyError:
@@ -275,6 +276,39 @@ class Script:
                                    'nor in {}'.format(filename, prefix))
         else:
             raise RuntimeError('File {} not found, please make sure there are no typos in the name'.format(filename))
+    
+    @staticmethod
+    def check_tcl(tcl_file):
+        """
+        If the files to be read by VMD were saved as
+        absolute paths and then transferred to another
+        machine, this fn will identify missing paths
+        and look for the files in the working dir,
+        creating another file if needed
+        :param tcl_file: str, path to the VMD visualization state
+        :return: str, new (or same) path to the VMD visualization state
+        """
+        inp = [line for line in open(tcl_file)]
+        modded = False
+        for n in range(len(inp)):
+            if inp[n].strip().startswith('mol') and inp[n].split()[1] in ['new', 'addfile'] \
+                    and inp[n].split()[2].startswith('/'):
+                if not os.path.isfile(inp[n].split()[2]):
+                    if os.path.isfile(inp[n].split()[2].split('/')[-1]):
+                        print('Warning: absolute path {} was substituted with a relative path to the local file {}; '
+                              'the modified .vmd file will be '
+                              'backed up'.format(inp[n].split()[2], inp[n].split()[2].split('/')[-1]))
+                        inp[n] = ' '.join(inp[n].split()[:2]) + " {} ".format(inp[n].split()[2].split('/')[-1]) \
+                                 + ' '.join(inp[n].split()[3:])
+                        modded = True
+        if modded:
+            with open(tcl_file + '.localcopy', 'w') as new_tcl:
+                for line in inp:
+                    new_tcl.write(line)
+            return tcl_file + '.localcopy'
+        else:
+            return tcl_file
+                
 
 
 class Scene:
@@ -350,7 +384,7 @@ class Scene:
             self.run_vmd = True
             if self.visualization:
                 code = [line for line in open(self.visualization, 'r').readlines() if not line.startswith('#')]
-                code = ''.join(code)  # TODO maybe add 1s delay?
+                code = ''.join(code)
             else:
                 code = 'mol new {} type {} first 0 last -1 step 1 filebonds 1 ' \
                        'autobonds 1 waitfor all\n'.format(self.structure, self.structure.split('.')[-1])
@@ -365,7 +399,7 @@ class Scene:
                 code += 'render options Tachyon \"$env(TACHYON_BIN)\" -aasamples 12 %s -format ' \
                         'TARGA -o %s.tga -res {} {}\n'.format(*self.resolution)
             else:
-                code += 'display resize {res}\nsleep 1\n' \
+                code += 'display resize {res}\nafter 100\ndisplay update\nafter 100\n' \
                         'display resize {res}'.format(res=' '.join(str(x) for x in self.resolution))
             action_code = ''
             for ac in self.actions:

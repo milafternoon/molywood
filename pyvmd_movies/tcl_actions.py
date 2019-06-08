@@ -224,8 +224,8 @@ def gen_setup(action):
             alias = 'label{}'.format(len(action.scene.labels['Bonds'])+1)
         action.scene.labels['Bonds'].append(alias)
         sel1 = action.parameters['selection1']
-        sel2 = action.parameters['selection2']  # TODO might not work with display none?
-        setups['add'] = 'save_vp 1\n'
+        sel2 = action.parameters['selection2']
+        setups['add'] = 'package require viewchangerender\nsave_vp 1\n'
         setups['add'] += 'proc geom_center {selection} {\n    set gc [veczero]\n' \
                          '    foreach coord [$selection get {x y z}] {\n       set gc [vecadd $gc $coord]}\n    ' \
                          'return [vecscale [expr 1.0 /[$selection num]] $gc]}\n\n'

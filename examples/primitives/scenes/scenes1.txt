@@ -38,7 +38,6 @@ rotate  axis=y angle=720 t=10s sigmoid=sls
 
 # scene6
 
-do_nothing 
 rotate  axis=y angle=720 t=10s sigmoid=sls
 
 # scene7
