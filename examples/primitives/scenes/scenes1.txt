@@ -1,0 +1,59 @@
+$ global fps=20 draft=f keepframes=f name=scenes1
+$ layout columns=3 rows=3
+$ scene1 pdb_code=1w0t resolution=400,400 position=0,0
+$ scene2 pdb_code=5zfz resolution=400,400 position=0,1
+$ scene3 pdb_code=9ant resolution=400,400 position=0,2
+$ scene4 pdb_code=3lnq resolution=400,400 position=1,0
+$ scene5 pdb_code=1ig7 resolution=400,400 position=1,1
+$ scene6 pdb_code=1b72 resolution=400,400 position=1,2
+$ scene7 pdb_code=1yrn resolution=400,400 position=2,0
+$ scene8 pdb_code=1puf resolution=400,400 position=2,1
+$ scene9 pdb_code=1w0u resolution=400,400 position=2,2
+
+
+# scene1
+
+rotate  axis=x angle=-90 
+rotate  axis=y angle=720 t=10s sigmoid=sls
+
+# scene2
+
+rotate  axis=z angle=-30 
+rotate  axis=y angle=720 t=10s sigmoid=sls
+
+# scene3
+
+rotate  axis=z angle=-30 
+rotate  axis=y angle=720 t=10s sigmoid=sls
+
+# scene4
+
+rotate  axis=x angle=-90 
+rotate  axis=y angle=720 t=10s sigmoid=sls
+
+# scene5
+
+rotate  axis=x angle=-90 
+rotate  axis=y angle=720 t=10s sigmoid=sls
+
+# scene6
+
+do_nothing 
+rotate  axis=y angle=720 t=10s sigmoid=sls
+
+# scene7
+
+rotate  axis=z angle=-45 
+rotate  axis=y angle=720 t=10s sigmoid=sls
+
+# scene8
+
+rotate  axis=z angle=20 
+rotate  axis=y angle=720 t=10s sigmoid=sls
+
+# scene9
+
+rotate  axis=x angle=-90 
+rotate  axis=y angle=720 t=10s sigmoid=sls
+
+

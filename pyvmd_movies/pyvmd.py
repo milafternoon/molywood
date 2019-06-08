@@ -358,7 +358,8 @@ class Scene:
                     code += 'mol addfile {} type {} first 0 last -1 step 1 filebonds 1 ' \
                             'autobonds 1 waitfor all\n'.format(self.trajectory, self.trajectory.split('.')[-1])
                 code += 'mol delrep 0 top\nmol representation NewCartoon 0.300000 10.000000 4.100000 0\n' \
-                        'mol color Structure\nmol selection {all}\nmol material Opaque\nmol addrep top\n'
+                        'mol color Structure\nmol selection {all}\nmol material Opaque\nmol addrep top\n' \
+                        'color Display Background white\n'
             code += 'axes location off\n'
             if not self.script.draft:
                 code += 'render options Tachyon \"$env(TACHYON_BIN)\" -aasamples 12 %s -format ' \

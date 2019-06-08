@@ -296,7 +296,15 @@ def gen_setup(action):
                         '    $fit_compare frame $frame\n    $fit_system frame $frame\n' \
                         '    set fit_matrix [measure fit $fit_compare $fit_reference]\n' \
                         '    $fit_system move $fit_matrix }}\n\n'.format(sel, sel)
-    return setups
+    if 'rotate' in action.action_type:
+        if action.framenum == 0:
+            angle = action.parameters['angle']
+            check_if_convertible(angle, float, 'smooth')
+            axis = action.parameters['axis']
+            if axis.lower() not in 'xyz':
+                raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given instead".format(axis))
+            setups['rot'] = 'rotate {} by {}\n'.format(axis.lower(), angle)
+    return setups  # TODO add instantaneous rotation
 
 
 def gen_iterators(action):
@@ -311,16 +319,17 @@ def gen_iterators(action):
     num_precision = 5
     sigmoid, sls, abruptness = check_sigmoid(action.parameters)
     if 'rotate' in action.action_type:
-        for rkey in action.rots.keys():
-            angle = action.rots[rkey]['angle']
-            check_if_convertible(angle, float, 'smooth')
-            if sigmoid:
-                arr = sigmoid_norm_sum(float(angle), action.framenum, abruptness)
-            elif sls:
-                arr = sigmoid_norm_sum_linear_mid(float(angle), action.framenum, abruptness)
-            else:
-                arr = np.ones(action.framenum) * float(angle)/action.framenum
-            iterators[rkey] = ' '.join([str(round(el, num_precision)) for el in arr])
+        if action.framenum > 0:
+            for rkey in action.rots.keys():
+                angle = action.rots[rkey]['angle']
+                check_if_convertible(angle, float, 'smooth')
+                if sigmoid:
+                    arr = sigmoid_norm_sum(float(angle), action.framenum, abruptness)
+                elif sls:
+                    arr = sigmoid_norm_sum_linear_mid(float(angle), action.framenum, abruptness)
+                else:
+                    arr = np.ones(action.framenum) * float(angle)/action.framenum
+                iterators[rkey] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'zoom_in' in action.action_type:
         scale = action.parameters['scale']
         check_if_convertible(scale, float, 'scale')
@@ -401,11 +410,12 @@ def gen_command(action):
     """
     commands = {}
     if 'rotate' in action.action_type:
-        for rkey in action.rots.keys():
-            axis = action.rots[rkey]['axis']
-            if axis.lower() not in 'xyz':
-                raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given instead".format(axis))
-            commands[rkey] = "set t [lindex ${} $i]\n  rotate {} by $t\n".format(rkey, axis.lower())
+        if action.framenum > 0:
+            for rkey in action.rots.keys():
+                axis = action.rots[rkey]['axis']
+                if axis.lower() not in 'xyz':
+                    raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given instead".format(axis))
+                commands[rkey] = "set t [lindex ${} $i]\n  rotate {} by $t\n".format(rkey, axis.lower())
     if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
         for t_ch in action.transp_changes.keys():
             material = action.transp_changes[t_ch]['material']

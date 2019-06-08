@@ -102,7 +102,8 @@ indicate defaults when parameters are optional.)
 
 ### List of available global keywords and parameters:
 
-+ global (\[fps=20  draft=t/**f** keepframes=t/**f** name=**movie**\])
++ global (\[fps=20  draft=t/**f** keepframes=t/**f** name=**movie**
+render=**t**/f\])
 + layout (\[rows=**1** columns=**1**\])
 + figure (\[files=figure1.png,figure2.png,...\])
 + scene_identifier (\[visualization=... structure=... trajectory=...
