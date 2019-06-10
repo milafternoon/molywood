@@ -1,4 +1,4 @@
-$ global fps=20 draft=f keepframes=f name=rotate1
+$ global fps=20 draft=t keepframes=f name=rotate1
 $ scene1 visualization=../tubulin.vmd resolution=750,750
 
 # scene1

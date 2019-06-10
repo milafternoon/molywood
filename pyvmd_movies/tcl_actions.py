@@ -304,7 +304,7 @@ def gen_setup(action):
             if axis.lower() not in 'xyz':
                 raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given instead".format(axis))
             setups['rot'] = 'rotate {} by {}\n'.format(axis.lower(), angle)
-    return setups  # TODO add instantaneous rotation
+    return setups
 
 
 def gen_iterators(action):

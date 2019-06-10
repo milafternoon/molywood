@@ -96,9 +96,10 @@ style=**newcartoon**/licorice/surf/quicksurf alias=...\])
 
 
 (Note that **only** finite-time actions can be combined using curly
-brackets. Also, all finite-time require the t=...s keyword. Above,
-square brackets denote optional parameters. Values in bold font
-indicate defaults when parameters are optional.)
+brackets. Also, almost all finite-time actions (except for `rotate`)
+require the t=...s keyword. Above, square brackets denote optional
+parameters. Values in bold font indicate defaults when parameters
+are optional.)
 
 ### List of available global keywords and parameters:
 

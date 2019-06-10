@@ -59,7 +59,7 @@ def postprocessor(script):
         convert_command += ' -append '
         for fr in range(script.scenes[0].total_frames):
             frames = [fr] * (nrows*ncols)
-            os.system('convert ' + convert_command.format(*frames) + '{}-{}.png'.format(script.name, fr))
+            os.system(script.convert + ' ' + convert_command.format(*frames) + '{}-{}.png'.format(script.name, fr))
             
 
 def gen_fig(action):
@@ -72,20 +72,21 @@ def gen_fig(action):
     :param action: Action, object to extract info from
     :return: None
     """
+    convert = action.scene.script.convert
     if 'show_figure' in action.action_type:
         if 'figure' in action.parameters.keys():
             fig_file = action.parameters['figure']
             fig_file = action.scene.script.check_path(fig_file)
             for fr in range(action.initframe, action.initframe + action.framenum):
-                os.system('convert {} -resize {}x{} {}-{}.png'.format(fig_file, *action.scene.resolution,
-                                                                      action.scene.name, fr))
+                os.system('{} {} -resize {}x{} {}-{}.png'.format(convert, fig_file, *action.scene.resolution,
+                                                                 action.scene.name, fr))
         elif 'datafile' in action.parameters.keys():
             df = action.parameters['datafile']
             df = action.scene.script.check_path(df)
             data_simple_plot(action, df, 'spl')
             for fr in range(action.initframe, action.initframe + action.framenum):
                 fig_file = '{}-{}.png'.format(action.scene.name, fr)
-                os.system('convert spl-{} -resize {}x{} {}'.format(fig_file, *action.scene.resolution, fig_file))
+                os.system('{} spl-{} -resize {}x{} {}'.format(convert, fig_file, *action.scene.resolution, fig_file))
             
     if 'add_overlay' in action.action_type:
         frames = range(action.initframe, action.initframe + action.framenum)
@@ -104,14 +105,14 @@ def gen_fig(action):
                 fig_file = action.scene.script.check_path(fig_file)
                 for fr in frames:
                     ovl_file = '{}-{}-{}.png'.format(ovl, scene, fr)
-                    os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, ovl_file))
+                    os.system('{} {} -resize {}x{} {}'.format(convert, fig_file, *overlay_res, ovl_file))
             elif 'datafile' in action.overlays[ovl].keys():
                 df = action.overlays[ovl]['datafile']
                 df = action.scene.script.check_path(df)
                 data_simple_plot(action, df, ovl)
                 for fr in frames:
                     fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
-                    os.system('convert {} -resize {}x{} {}'.format(fig_file, *overlay_res, fig_file))
+                    os.system('{} {} -resize {}x{} {}'.format(convert, fig_file, *overlay_res, fig_file))
             elif 'text' in action.overlays[ovl].keys():
                 text = action.overlays[ovl]['text']
                 try:
@@ -126,9 +127,9 @@ def gen_fig(action):
                 for fr in frames:
                     newtext = text.replace('[]', '{:.3f}').format(arr[fr-action.initframe])
                     fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
-                    os.system('convert -size {}x{} xc:transparent -font "AvantGarde-Book" -pointsize {} '
+                    os.system('{} -size {}x{} xc:transparent -font "AvantGarde-Book" -pointsize {} '
                               '-gravity SouthWest -fill black -annotate +0+0 "{}" '
-                              '{}'.format(*res, tsize, newtext, fig_file))
+                              '{}'.format(convert, *res, tsize, newtext, fig_file))
                 
 
 def equalize_frames(script):
@@ -145,7 +146,10 @@ def equalize_frames(script):
     for n, nf in enumerate(nframes):
         if nf < highest:
             for i in range(nf, highest):
-                os.system('cp {}-{}.png {}-{}.png'.format(names[n], nf-1, names[n], i))
+                if os.name == 'posix':
+                    os.system('cp {}-{}.png {}-{}.png'.format(names[n], nf-1, names[n], i))
+                else:
+                    os.system('copy {}-{}.png {}-{}.png'.format(names[n], nf - 1, names[n], i))
 
 
 def compose_overlay(action):
@@ -184,13 +188,10 @@ def compose_overlay(action):
             fig_file = '{}-{}-{}.png'.format(ovl, scene, fr)
             target_fig = '{}-{}.png'.format(scene, fr)
             if opa != 1:
-                os.system('convert {} -alpha set -channel a -evaluate multiply {} +channel {}'.format(fig_file,
-                                                                                                      opa,
-                                                                                                      fig_file))
-            os.system('composite -gravity SouthWest -compose atop -geometry +{}+{} {} {} {}'.format(*origin_px,
-                                                                                                    fig_file,
-                                                                                                    target_fig,
-                                                                                                    target_fig))
+                os.system('{} {} -alpha set -channel a -evaluate multiply {} '
+                          '+channel {}'.format(action.scene.script.convert, fig_file, opa, fig_file))
+            os.system('{} -gravity SouthWest -compose atop -geometry +{}+{} '
+                      '{} {} {}'.format(action.scene.script.compose, *origin_px, fig_file, target_fig, target_fig))
 
 
 def data_simple_plot(action, datafile, basename):

@@ -1,4 +1,5 @@
 import sys
+from subprocess import call
 import os
 
 if __name__ == "__main__":
@@ -25,10 +26,10 @@ class Script:
         self.scenes = []
         self.directives = {}
         self.fps = 20
-        self.draft = False
-        self.do_render = True
-        self.keepframes = True
+        self.draft, self.do_render, self.keepframes = False, True, False
         self.scriptfile = scriptfile
+        self.vmd, self.remove, self.compose, self.convert = 5 * [None]
+        self.setup_os_commands()
         if self.scriptfile:
             self.from_file()
 
@@ -48,20 +49,29 @@ class Script:
                 ddev = '-dispdev none' if not self.draft else ''
                 if not self.do_render and not self.draft:
                     raise RuntimeError("render=false is only compatible with draft=true")
-                os.system('vmd {} -e script_{}.tcl -startup ""'.format(ddev, scene.name))
+                call('{} {} -e script_{}.tcl -startup ""'.format(self.vmd, ddev, scene.name))
                 if self.do_render:
-                    os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); '
-                              'rm $i; done'.format(scene.name))
+                    if os.name == 'posix':
+                        call('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); '
+                             'rm $i; done'.format(scene.name))
+                    else:
+                        to_convert = [x for x in os.listdir('.') if x.startswith(scene.name) and x.endswith('tga')]
+                        for tgafile in to_convert:
+                            pngfile = tgafile.replace('tga', 'png')
+                            call('{} {} {}'.format(self.convert, tgafile, pngfile))
                 if not self.draft:
-                    os.system('for i in $(ls {}-*png); do rm $(echo $i | sed "s/png/dat/g"); done'.format(scene.name))
+                    if os.name == 'posix':
+                        call('for i in $(ls {}-*png); do rm $(echo $i | sed "s/png/dat/g"); done'.format(scene.name))
+                    else:
+                        call('del {}*dat'.format(scene.name))
             for action in scene.actions:
                 action.generate_graph()  # here we generate matplotlib figs on-the-fly
         # at this stage, each scene should have all its initial frames rendered
         if self.do_render:
             graphics_actions.postprocessor(self)
-            os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
-                      '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" {}.mp4'.format(self.fps,  self.name,
-                                                                                                   self.name))
+            call('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
+                 '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" {}.mp4'.format(self.fps,  self.name,
+                                                                                              self.name))
         if not self.keepframes:
             for sc in self.scenes:
                 if '/' in sc.name or '\\' in sc.name or '~' in sc.name:
@@ -70,20 +80,20 @@ class Script:
                                        'Error triggered by: {}'.format(sc.name))
                 else:
                     if any([x for x in os.listdir('.') if x.startswith(sc.name) and x.endswith('png')]):
-                        os.system('rm {}-[0-9]*.png'.format(sc.name))
+                        call('{} {}-[0-9]*.png'.format(self.remove, sc.name))
                     if any([x for x in os.listdir('.') if x.startswith('overlay') and x.endswith('png')
                             and sc.name in x]):
-                        os.system('rm overlay[0-9]*-{}-[0-9]*.png'.format(sc.name))
+                        call('{} overlay[0-9]*-{}-[0-9]*.png'.format(self.remove, sc.name))
                     if any([x for x in os.listdir('.') if x.startswith('script') and x.endswith('tcl')
                             and sc.name in x]):
-                        os.system('rm script_{}.tcl'.format(sc.name))
+                        call('{} script_{}.tcl'.format(self.remove, sc.name))
             if '/' in self.name or '\\' in self.name or '~' in self.name:
                 raise RuntimeError('For security reasons, cleanup of scenes that contain path-like elements '
                                    '(slashes, backslashes, tildes) is prohibited.\n\n'
                                    'Error triggered by: {}'.format(self.name))
             else:
                 if any([x for x in os.listdir('.') if x.startswith(self.name) and x.endswith('png')]):
-                    os.system('rm {}-[0-9]*.png'.format(self.name))
+                    call('{} {}-[0-9]*.png'.format(self.remove, self.name))
     
     def show_script(self):
         """
@@ -137,6 +147,37 @@ class Script:
         self.directives = self.parse_directives(master_setup)
         self.scenes = self.parse_scenes(subscripts)
         self.prepare()
+    
+    def setup_os_commands(self):
+        """
+        Paths to VMD, imagemagick utilities, OS-specific
+        versions of rm/del, ls/dir, which/where, ffmpeg etc.
+        have to be determined to allow for Linux/OSX/Win
+        compatibility
+        :return: None
+        """
+        if os.name == 'posix':
+            self.remove = 'rm'
+            self.vmd = 'vmd'
+            self.compose, self.convert = 'composite', 'convert'
+        elif os.name == 'nt':
+            import pathlib
+            self.remove = 'del'
+            for pfiles in [x for x in os.listdir('C:\\') if x.startswith('Program Files')]:
+                for file in pathlib.Path(pfiles).glob('**/vmd.exe'):
+                    self.vmd = str(file)
+            if not self.vmd:
+                raise RuntimeError("VMD was not found in any of the Program Files directories, check your installation")
+            if call('where ffmpeg') != 0:
+                raise RuntimeError('ffmpeg not found, please make sure it was added to the system path during '
+                                   'installation (see README)')
+            if call('where magick') == 0:
+                self.compose, self.convert = 'magick composite', 'magick convert'
+            else:
+                raise RuntimeError('imagemagick not found, please make sure it was added to the system path during '
+                                   'installation (see README)')
+        else:
+            raise RuntimeError('OS type could not be detected')
         
     @staticmethod
     def parse_directives(directives):
@@ -209,6 +250,8 @@ class Script:
                         except KeyError:
                             pass
                         else:
+                            if os.name == 'nt':
+                                raise RuntimeError("direct download of PDB files currently not supported on Windows")
                             pdb = pdb.upper()
                             if not pdb.upper() + '.pdb' in os.listdir('.'):
                                 if os.system('which wget') == 0:
