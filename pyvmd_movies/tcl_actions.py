@@ -207,7 +207,7 @@ def gen_setup(action):
             nlab = len(action.scene.labels[lab_type])
             setups['rml'] = nlab * 'label delete {} 0\n'.format(lab_type)
             action.scene.labels[lab_type] = []
-    if 'add_distance' in action.action_type:
+    if 'add_distance' in action.action_type:  # TODO make it work when frame numbers decrease
         try:
             label_color = action.parameters['label_color']
         except KeyError:
@@ -225,7 +225,7 @@ def gen_setup(action):
         action.scene.labels['Bonds'].append(alias)
         sel1 = action.parameters['selection1']
         sel2 = action.parameters['selection2']
-        setups['add'] = 'package require multiseq\nsave_vp 1\n'
+        setups['add'] = 'package require multiseq\nsave_vp 1\nset currframe [molinfo 0 get frame]\n\n'
         setups['add'] += 'proc geom_center {selection} {\n    set gc [veczero]\n' \
                          '    foreach coord [$selection get {x y z}] {\n       set gc [vecadd $gc $coord]}\n    ' \
                          'return [vecscale [expr 1.0 /[$selection num]] $gc]}\n\n'
@@ -242,8 +242,10 @@ def gen_setup(action):
                          '  set sel [atomselect $molind "index 0"]\n  set ssel [atomselect 0 "{}"]\n' \
                          '  $sel set {{x y z}} [list [geom_center $ssel]]\n  set ssel [atomselect 0 "{}"]\n' \
                          '  set sel [atomselect $molind "index 1"]\n  $sel set {{x y z}} [list [geom_center $ssel]]\n' \
-                         '}}\n\nreposition_dummies $newmol{}\n\n'.format(sel1, sel2, alias)
-        setups['add'] += 'display resetview\n'
+                         '}}\n\n'.format(sel1, sel2)
+        setups['add'] += 'set num_steps [molinfo top get numframes]\nfor {{set frame 0}} {{$frame < $num_steps}} ' \
+                         '{{incr frame}} {{\n  animate goto $frame\n  reposition_dummies $newmol{}}}\n\n'.format(alias)
+        setups['add'] += 'animate goto $currframe\n\ndisplay resetview\n'
         setups['add'] += 'retr_vp 1\n'  # re-align all after display resetview
     if 'highlight' in action.action_type:
         colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
@@ -426,9 +428,6 @@ def gen_command(action):
         commands['zou'] = "set t [lindex $zou $i]\n  scale by $t\n"
     if 'animate' in action.action_type:
         commands['ani'] = "set t [lindex $ani $i]\n  animate goto $t\n"
-        if len(action.scene.labels['Bonds']) > 0:
-            for alias in action.scene.labels['Bonds']:
-                commands['ani'] += 'reposition_dummies $newmol{}\n'.format(alias)
     if 'highlight' in action.action_type:
         hls = [action.highlights[x] for x in action.highlights.keys()]
         hl_labels = list(action.highlights.keys())

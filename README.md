@@ -11,18 +11,18 @@ TCL UserAni library, and add extended functionalities such as
 animating trajectory data with matplotlib, adding insets or
 making multi-panel movies.
 
-The basic idea behind the functionalities of `pyvmd`, as well as the
-general structure of the code, are illustrated in `script_structure.svg`.
+The basic idea behind the functionalities of `pyvmd` is best understood
+through the examples hosted on ... More advanced users might want to
+familiarize themselves with the general structure of the code
+illustrated in `script_structure.svg`.
 
 ### Requirements
 
-The internal workflow is as follows: generate the TCL script > run VMD
-to render frames > post-process using imagemagick > combine frames
-using ffmpeg. Therefore, full automation requires that `python3`, `VMD`,
-`imagemagick` and `ffmpeg` be installed on the system you're using
-to produce the movie. The good news is that it can be done externally,
+Full functionality requires that `python3`, `VMD`, `imagemagick` and
+`ffmpeg` be installed. The good news is that it can be done externally,
 e.g. on a remote workstation, once you set up the visualization state
-locally.
+locally. Using the draft mode with `render=f` (see below), you can also
+preview your movie only with `python3` and `VMD`.
 
 Note:
 + It is recommended to use `python3` from the Anaconda distribution
@@ -130,6 +130,7 @@ that time might as well only be specified once
 `$ global fps=20` (see available global keywords above)
 + true/false values can be specified as `true/false`, `yes/no` or in
 shorthand notation (`t/f`, `y/n`)
++ Comments can be introduced with an exclamation mark, `!`
 
 ### Notes on extra graphics features
 
@@ -194,7 +195,9 @@ adjusting the playback speed to the time specified with `t`;
 + `rotate` rotates the scene by `angle` degrees about `axis` in time `t`.
 `sigmoid=t` gives a smooth transition, while `sigmoid=f` gives a
 constant-velocity one; optionally, `sigmoid=sls` performs a smooth-
-linear-smooth transition (preferable for e.g. multiple full rotations)
+linear-smooth transition (preferable for e.g. multiple full rotations);
+when `t` is not specified, `rotate` will behave as an instantaneous
+action
 + `zoom_in`/`zoom_out` scales the view by a factor of `scale` in time `t`.
 `sigmoid` works like for `rotation`.
 + `make_transparent`/`make_opaque` change the opacity of a selected

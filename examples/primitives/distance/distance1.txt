@@ -8,6 +8,7 @@ $ scene1 visualization=../tubulin.vmd resolution=750,750
  highlight        selection="resid > 410" mode=u color=green;
  highlight        selection="resid > 410" style=licorice color=name mode=u;
  make_transparent material=Diffuse;
+ make_transparent material=Opaque;
  zoom_in          scale=2
 }
 
