@@ -153,9 +153,9 @@ def gen_setup(action):
             pass
         else:
             check_if_convertible(smooth, int, 'smooth')
-            setups['ani'] = 'foreach nmol [molinfo list] {{\nset nrep [molinfo $nmol get numreps]\n' \
+            setups['ani'] = 'set mtop [molinfo top]\nset nrep [molinfo $mtop get numreps]\n' \
                             'for {{set i 0}} {{$i < $nrep}} {{incr i}} {{\n' \
-                            'mol smoothrep $mtop $i {}\n}}\n'.format(smooth)  # TODO smooth for all mols (distances?)
+                            'mol smoothrep $mtop $i {}\n}}\n'.format(smooth)
     if 'add_label' in action.action_type:
         try:
             label_color = action.parameters['label_color']

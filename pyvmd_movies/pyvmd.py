@@ -28,7 +28,7 @@ class Script:
         self.fps = 20
         self.draft, self.do_render, self.keepframes = False, True, False
         self.scriptfile = scriptfile
-        self.vmd, self.remove, self.compose, self.convert = 5 * [None]
+        self.vmd, self.remove, self.compose, self.convert = 4 * [None]
         self.setup_os_commands()
         if self.scriptfile:
             self.from_file()
@@ -49,10 +49,10 @@ class Script:
                 ddev = '-dispdev none' if not self.draft else ''
                 if not self.do_render and not self.draft:
                     raise RuntimeError("render=false is only compatible with draft=true")
-                call('{} {} -e script_{}.tcl -startup ""'.format(self.vmd, ddev, scene.name))
+                os.system('{} {} -e script_{}.tcl -startup ""'.format(self.vmd, ddev, scene.name))
                 if self.do_render:
                     if os.name == 'posix':
-                        call('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); '
+                        os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); '
                              'rm $i; done'.format(scene.name))
                     else:
                         to_convert = [x for x in os.listdir('.') if x.startswith(scene.name) and x.endswith('tga')]
@@ -61,17 +61,16 @@ class Script:
                             call('{} {} {}'.format(self.convert, tgafile, pngfile))
                 if not self.draft:
                     if os.name == 'posix':
-                        call('for i in $(ls {}-*png); do rm $(echo $i | sed "s/png/dat/g"); done'.format(scene.name))
+                        os.system('for i in $(ls {}-*png); do rm $(echo $i | sed "s/png/dat/g"); done'.format(scene.name))
                     else:
-                        call('del {}*dat'.format(scene.name))
+                        os.system('del {}*dat'.format(scene.name))
             for action in scene.actions:
                 action.generate_graph()  # here we generate matplotlib figs on-the-fly
         # at this stage, each scene should have all its initial frames rendered
         if self.do_render:
             graphics_actions.postprocessor(self)
-            call('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high '
-                 '-crf 20 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" {}.mp4'.format(self.fps,  self.name,
-                                                                                              self.name))
+            os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high -crf 20 -pix_fmt yuv420p '
+                 '-vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" {}.mp4'.format(self.fps, self.name, self.name))
         if not self.keepframes:
             for sc in self.scenes:
                 if '/' in sc.name or '\\' in sc.name or '~' in sc.name:
@@ -80,20 +79,20 @@ class Script:
                                        'Error triggered by: {}'.format(sc.name))
                 else:
                     if any([x for x in os.listdir('.') if x.startswith(sc.name) and x.endswith('png')]):
-                        call('{} {}-[0-9]*.png'.format(self.remove, sc.name))
+                        os.system('{} {}-[0-9]*.png'.format(self.remove, sc.name))
                     if any([x for x in os.listdir('.') if x.startswith('overlay') and x.endswith('png')
                             and sc.name in x]):
-                        call('{} overlay[0-9]*-{}-[0-9]*.png'.format(self.remove, sc.name))
+                        os.system('{} overlay[0-9]*-{}-[0-9]*.png'.format(self.remove, sc.name))
                     if any([x for x in os.listdir('.') if x.startswith('script') and x.endswith('tcl')
                             and sc.name in x]):
-                        call('{} script_{}.tcl'.format(self.remove, sc.name))
+                        os.system('{} script_{}.tcl'.format(self.remove, sc.name))
             if '/' in self.name or '\\' in self.name or '~' in self.name:
                 raise RuntimeError('For security reasons, cleanup of scenes that contain path-like elements '
                                    '(slashes, backslashes, tildes) is prohibited.\n\n'
                                    'Error triggered by: {}'.format(self.name))
             else:
                 if any([x for x in os.listdir('.') if x.startswith(self.name) and x.endswith('png')]):
-                    call('{} {}-[0-9]*.png'.format(self.remove, self.name))
+                    os.system('{} {}-[0-9]*.png'.format(self.remove, self.name))
     
     def show_script(self):
         """
@@ -164,7 +163,7 @@ class Script:
             import pathlib
             self.remove = 'del'
             for pfiles in [x for x in os.listdir('C:\\') if x.startswith('Program Files')]:
-                for file in pathlib.Path(pfiles).glob('**/vmd.exe'):
+                for file in pathlib.Path('C:\\{}'.format(pfiles)).glob('**/vmd.exe'):
                     self.vmd = str(file)
             if not self.vmd:
                 raise RuntimeError("VMD was not found in any of the Program Files directories, check your installation")
