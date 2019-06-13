@@ -479,7 +479,7 @@ class Action:
                       'remove_label': {'alias', 'all'},
                       'add_distance': {'selection1', 'selection2', 'label_color', 'text_size', 'alias'},
                       'remove_distance': {'alias', 'all'},
-                      'fit_trajectory': {'selection'}
+                      'fit_trajectory': {'selection', 't'}
                       }
     
     def __init__(self, scene, description):

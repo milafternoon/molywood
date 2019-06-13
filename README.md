@@ -239,8 +239,8 @@ action
  be chosen with `color`, using either simple color names (black, red,
  blue, orange, yellow, green and white), VMD-compatible ColorIDs (0-32)
  or a coloring scheme keyword (name, type, element, structure etc.).
- Similarly, `style` can be set to newcartoon, licorice, surf or
- quicksurf (non-case sensitive).
+ Similarly, `style` can be set to newcartoon, licorice, surf,
+ quicksurf, vdw or tube (non-case sensitive).
     + By default, highlight appears (fades in from transparency) and
     disappears smoothly over the course of the action. If you want your
     highlight to stay visible, use `mode=u` (up) to make it appear only.
@@ -249,3 +249,16 @@ action
     `alias=...` identical to a previously set `alias` of the highlight
     to be turned off; you only need to provide an alias to a highlight
     if you first turn it on and want to turn off later.
+
+### Known issues
+
++ VMD labels are always rendered using the `Opaque` material, so that
+making this material transparent (`make_transparent material=Opaque`)
+will make the labels disappear as well; the straightforward solution is
+to use a different material, or generate a copy
+(`VMD Main > Graphics > Materials > Create New`)
++ Also, the labels are rendered with a slightly different size and
+appearance with the Snapshot (`draft=t`) and Tachyon (`draft=f`)
+renderers
++ `fit_trajectory` produces an instantaneous jump in the coordinates,
+so that it should be performed at the beginning of a movie

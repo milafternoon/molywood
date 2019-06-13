@@ -207,7 +207,7 @@ def gen_setup(action):
             nlab = len(action.scene.labels[lab_type])
             setups['rml'] = nlab * 'label delete {} 0\n'.format(lab_type)
             action.scene.labels[lab_type] = []
-    if 'add_distance' in action.action_type:  # TODO make it work when frame numbers decrease
+    if 'add_distance' in action.action_type:
         try:
             label_color = action.parameters['label_color']
         except KeyError:
@@ -225,27 +225,27 @@ def gen_setup(action):
         action.scene.labels['Bonds'].append(alias)
         sel1 = action.parameters['selection1']
         sel2 = action.parameters['selection2']
-        setups['add'] = 'package require multiseq\nsave_vp 1\nset currframe [molinfo 0 get frame]\n\n'
-        setups['add'] += 'proc geom_center {selection} {\n    set gc [veczero]\n' \
-                         '    foreach coord [$selection get {x y z}] {\n       set gc [vecadd $gc $coord]}\n    ' \
-                         'return [vecscale [expr 1.0 /[$selection num]] $gc]}\n\n'
-        setups['add'] += 'proc retr_vp {view_num} {\n  global viewpoints  \n  foreach mol [molinfo list] {\n' \
-                         '    molinfo $mol set rotate_matrix   $viewpoints($view_num,0,0)' \
-                         '\n    molinfo $mol set center_matrix   $viewpoints($view_num,0,1)' \
-                         '\n    molinfo $mol set scale_matrix   $viewpoints($view_num,0,2)' \
-                         '\n    molinfo $mol set global_matrix   $viewpoints($view_num,0,3)\n  }\n}\n\n'
-        setups['add'] += 'set newmol{} [mol new atoms 2]\nmol representation Lines\nmol selection all\n' \
-                         'mol addrep $newmol{}\nlabel add Bonds 1/0 1/1\ncolor Labels Bonds {}\n' \
-                         'label textsize {}\nlabel textthickness 3\nmol top 0\n\n'.format(alias, alias, label_color,
-                                                                                          tsize)
-        setups['add'] += 'proc reposition_dummies {{molind}} {{  animate dup $molind\n' \
-                         '  set sel [atomselect $molind "index 0"]\n  set ssel [atomselect 0 "{}"]\n' \
-                         '  $sel set {{x y z}} [list [geom_center $ssel]]\n  set ssel [atomselect 0 "{}"]\n' \
-                         '  set sel [atomselect $molind "index 1"]\n  $sel set {{x y z}} [list [geom_center $ssel]]\n' \
-                         '}}\n\n'.format(sel1, sel2)
-        setups['add'] += 'set num_steps [molinfo top get numframes]\nfor {{set frame 0}} {{$frame < $num_steps}} ' \
-                         '{{incr frame}} {{\n  animate goto $frame\n  reposition_dummies $newmol{}}}\n\n'.format(alias)
-        setups['add'] += 'animate goto $currframe\n\ndisplay resetview\n'
+        setups['add'] = 'package require multiseq\n' \
+                        'save_vp 1\n' \
+                        'set currframe [molinfo 0 get frame]\n\n'
+        setups['add'] += geom_center()
+        setups['add'] += retr_vp()
+        setups['add'] += 'set newmol{} [mol new atoms 2]\n' \
+                         'mol representation Lines\n' \
+                         'mol selection all\n' \
+                         'mol addrep $newmol{}\n' \
+                         'label add Bonds 1/0 1/1\n' \
+                         'color Labels Bonds {}\n' \
+                         'label textsize {}\n' \
+                         'label textthickness 3\n' \
+                         'mol top 0\n\n'.format(alias, alias, label_color, tsize)
+        setups['add'] += reposition_dummies(sel1, sel2)
+        setups['add'] += 'set num_steps [molinfo top get numframes]\n' \
+                         'for {{set frame 0}} {{$frame < $num_steps}} {{incr frame}} {{\n' \
+                         '  animate goto $frame\n' \
+                         '  reposition_dummies $newmol{}}}\n\n'.format(alias)
+        setups['add'] += 'animate goto $currframe\n\n' \
+                         'display resetview\n'
         setups['add'] += 'retr_vp 1\n'  # re-align all after display resetview
     if 'highlight' in action.action_type:
         colors = {'black': 16, 'red': 1, 'blue': 0, 'orange': 3, 'yellow': 4, 'green': 7, 'white': 8}
@@ -255,7 +255,8 @@ def gen_setup(action):
             setups[lb] = ''
             mode = hl['mode'] if 'mode' in hl.keys() else 'ud'
             if mode in ['u', 'ud']:
-                setups[lb] += 'material add copy Opaque\nset mat{} [lindex [material list] end]\n' \
+                setups[lb] += 'material add copy Opaque\n' \
+                              'set mat{} [lindex [material list] end]\n' \
                               'material change opacity $mat{} 0\n'.format(lb, lb)
             try:
                 color_key = hl['color']
@@ -287,17 +288,17 @@ def gen_setup(action):
                         raise RuntimeError('{} is not a valid color description'.format(color_key))
             if mode in ['u', 'ud']:
                 sel = hl['selection']
-                setups[lb] += 'mol representation {} {}\nmol color {}\n' \
-                              'mol material $mat{}\nmol selection {{{}}}\n' \
+                setups[lb] += 'mol representation {} {}\n' \
+                              'mol color {}\n' \
+                              'mol material $mat{}\n' \
+                              'mol selection {{{}}}\n' \
                               'mol addrep top\n'.format(*style_params[style], cl, lb, sel)
     if 'fit_trajectory' in action.action_type:
         sel = action.parameters['selection']  # TODO smoothly transition current frame?
-        setups['fit'] = 'set fit_reference [atomselect top "{}" frame 0]\nset fit_compare [atomselect top "{}"]\n' \
-                        'set fit_system [atomselect top "all"]\nset num_steps [molinfo top get numframes]\n' \
-                        'for {{set frame 0}} {{$frame < $num_steps}} {{incr frame}} {{\n' \
-                        '    $fit_compare frame $frame\n    $fit_system frame $frame\n' \
-                        '    set fit_matrix [measure fit $fit_compare $fit_reference]\n' \
-                        '    $fit_system move $fit_matrix }}\n\n'.format(sel, sel)
+        setups['ftr'] = fit_slow(sel)
+        setups['ftr'] += scale_fit()
+        if action.framenum == 0:
+            setups['ftr'] += "fit_slow 1.0\n"
     if 'rotate' in action.action_type:
         if action.framenum == 0:
             angle = action.parameters['angle']
@@ -348,6 +349,15 @@ def gen_iterators(action):
         else:
             arr = np.ones(action.framenum) * 1/(float(scale)**(1/action.framenum))
         iterators['zou'] = ' '.join([str(round(el, num_precision)) for el in arr])
+    if 'fit_trajectory' in action.action_type:
+        if action.framenum > 0:
+            if sigmoid:
+                arr = sigmoid_increments(action.framenum, abruptness)
+            else:
+                arr = np.ones(action.framenum)/action.framenum
+            carr = np.cumsum(arr)[::-1]
+            arr /= carr
+            iterators['ftr'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
         for t_ch in action.transp_changes.keys():
             try:
@@ -417,17 +427,26 @@ def gen_command(action):
                 axis = action.rots[rkey]['axis']
                 if axis.lower() not in 'xyz':
                     raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given instead".format(axis))
-                commands[rkey] = "set t [lindex ${} $i]\n  rotate {} by $t\n".format(rkey, axis.lower())
+                commands[rkey] = "set t [lindex ${} $i]\n" \
+                                 "  rotate {} by $t\n".format(rkey, axis.lower())
     if 'make_transparent' in action.action_type or 'make_opaque' in action.action_type:
         for t_ch in action.transp_changes.keys():
             material = action.transp_changes[t_ch]['material']
-            commands[t_ch] = "set t [lindex ${} $i]\n  material change opacity {} $t\n".format(t_ch, material)
+            commands[t_ch] = "set t [lindex ${} $i]\n" \
+                             "  material change opacity {} $t\n".format(t_ch, material)
     if 'zoom_in' in action.action_type:
-        commands['zin'] = "set t [lindex $zin $i]\n  scale by $t\n"
+        commands['zin'] = "set t [lindex $zin $i]\n" \
+                          "  scale by $t\n"
     elif 'zoom_out' in action.action_type:
-        commands['zou'] = "set t [lindex $zou $i]\n  scale by $t\n"
+        commands['zou'] = "set t [lindex $zou $i]\n" \
+                          "  scale by $t\n"
     if 'animate' in action.action_type:
-        commands['ani'] = "set t [lindex $ani $i]\n  animate goto $t\n"
+        commands['ani'] = "set t [lindex $ani $i]\n" \
+                          "  animate goto $t\n"
+    if 'fit_trajectory' in action.action_type:
+        if action.framenum > 0:
+            commands['ftr'] = "set t [lindex $ftr $i]\n" \
+                              "  fit_slow $t\n"
     if 'highlight' in action.action_type:
         hls = [action.highlights[x] for x in action.highlights.keys()]
         hl_labels = list(action.highlights.keys())
@@ -439,7 +458,8 @@ def gen_command(action):
                 except KeyError:
                     raise RuntimeError('When mode=d, an alias has to be supplied to specify which highlight'
                                        'has to be turned off.')
-            commands[lb] = "set t [lindex ${} $i]\n  material change opacity $mat{} $t\n".format(lb, lb)
+            commands[lb] = "set t [lindex ${} $i]\n" \
+                           "  material change opacity $mat{} $t\n".format(lb, lb)
     return commands
 
 
@@ -465,3 +485,88 @@ def check_sigmoid(params_dict):
     else:
         check_if_convertible(abruptness, float, 'abruptness')
     return sigmoid, sls, abruptness
+
+
+# ---------------------------- TCL function definitions ---------------------------- #
+
+def reposition_dummies(sel1, sel2):
+    code = 'proc reposition_dummies {{molind}} {{  animate dup $molind\n' \
+           '  set sel [atomselect $molind "index 0"]\n  set ssel [atomselect 0 "{}"]\n' \
+           '  $sel set {{x y z}} [list [geom_center $ssel]]\n  set ssel [atomselect 0 "{}"]\n' \
+           '  set sel [atomselect $molind "index 1"]\n  $sel set {{x y z}} [list [geom_center $ssel]]\n' \
+           '}}\n\n'.format(sel1, sel2)
+    return code
+
+
+def retr_vp():
+    code = 'proc retr_vp {view_num} {\n  global viewpoints  \n  foreach mol [molinfo list] {\n' \
+           '    molinfo $mol set rotate_matrix   $viewpoints($view_num,0,0)\n' \
+           '    molinfo $mol set center_matrix   $viewpoints($view_num,0,1)\n' \
+           '    molinfo $mol set scale_matrix   $viewpoints($view_num,0,2)\n' \
+           '    molinfo $mol set global_matrix   $viewpoints($view_num,0,3)\n' \
+           '  }\n' \
+           '}\n\n'
+    return code
+
+
+def geom_center():
+    code = 'proc geom_center {selection} {\n' \
+           '    set gc [veczero]\n' \
+           '    foreach coord [$selection get {x y z}] {\n' \
+           '       set gc [vecadd $gc $coord]}\n' \
+           '    return [vecscale [expr 1.0 /[$selection num]] $gc]}\n\n'
+    return code
+
+
+def fit_slow(selection):
+    code = 'proc fit_slow {{frac}} {{\n' \
+           '  set fit_reference [atomselect top "{}" frame 0]\n' \
+           '  set fit_compare [atomselect top "{}"]\n' \
+           '  set fit_system [atomselect top "all"]\n' \
+           '  set num_steps [molinfo top get numframes]\n' \
+           '  for {{set frame 0}} {{$frame < $num_steps}} {{incr frame}} {{\n' \
+           '    $fit_compare frame $frame\n' \
+           '    $fit_system frame $frame\n' \
+           '    set fit_matrix [measure fit $fit_compare $fit_reference]\n' \
+           '    set scaled_fit [scale_fit $fit_matrix $frac]\n' \
+           '    $fit_system move $scaled_fit}}\n' \
+           '}}\n\n'.format(selection, selection)
+    return code
+
+
+def scale_fit():
+    code = 'proc scale_fit {fitting_matrix multip} {\n' \
+           '  set pi 3.1415926535\n' \
+           '  set R31 [lindex $fitting_matrix 2 0]\n' \
+           '  if {$R31 == 1} {\n' \
+           '    set phi1 0.\n' \
+           '    set psi1 [expr atan2([lindex $fitting_matrix 0 1],[lindex $fitting_matrix 0 2]) ]\n' \
+           '    set theta1 [expr -$pi/2]\n' \
+           '  } elseif {$R31 == -1} {\n' \
+           '    set phi1 0.\n' \
+           '    set psi1 [expr atan2([lindex $fitting_matrix 0 1],[lindex $fitting_matrix 0 2]) ]\n' \
+           '    set theta1 [expr $pi/2]\n' \
+           '  } else {\n' \
+           '    set theta1 [expr -asin($R31)]\n' \
+           '    set cosT [expr cos($theta1)]\n' \
+           '    set psi1 [expr  atan2([lindex $fitting_matrix 2 1]/$cosT,[lindex $fitting_matrix 2 2]/$cosT) ]\n' \
+           '    set phi1 [expr  atan2([lindex $fitting_matrix 1 0]/$cosT,[lindex $fitting_matrix 0 0]/$cosT) ]\n' \
+           '  }\n' \
+           '  set theta [expr $multip*$theta1]\n' \
+           '  set phi [expr $multip*$phi1]\n' \
+           '  set psi [expr $multip*$psi1]\n' \
+           '  lset fitting_matrix {0 0} [expr cos($theta)*cos($phi)]\n' \
+           '  lset fitting_matrix {0 1} [expr sin($psi)*sin($theta)*cos($phi) - cos($psi)*sin($phi)]\n' \
+           '  lset fitting_matrix {0 2} [expr cos($psi)*sin($theta)*cos($phi) + sin($psi)*sin($phi)]\n' \
+           '  lset fitting_matrix {0 3} [expr $multip*[lindex $fitting_matrix 0 3]]\n' \
+           '  lset fitting_matrix {1 0} [expr cos($theta)*sin($phi)]\n' \
+           '  lset fitting_matrix {1 1} [expr sin($psi)*sin($theta)*sin($phi) + cos($psi)*cos($phi)]\n' \
+           '  lset fitting_matrix {1 2} [expr cos($psi)*sin($theta)*sin($phi) - sin($psi)*cos($phi)]\n' \
+           '  lset fitting_matrix {1 3} [expr $multip*[lindex $fitting_matrix 1 3]]\n' \
+           '  lset fitting_matrix {2 0} [expr -sin($theta)]\n' \
+           '  lset fitting_matrix {2 1} [expr sin($psi)*cos($theta)]\n' \
+           '  lset fitting_matrix {2 2} [expr cos($psi)*cos($theta)]\n' \
+           '  lset fitting_matrix {2 3} [expr $multip*[lindex $fitting_matrix 2 3]]\n' \
+           '  return $fitting_matrix\n' \
+           '}\n\n'
+    return code
