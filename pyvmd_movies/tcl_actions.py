@@ -316,9 +316,9 @@ def gen_setup(action):
             else:
                 raise RuntimeError("The 'axis' keyword in fit_trajectory could not be understood")
             setups['ftr'] = sel_it()
-            setups['ftr'] += sel_com()
+            setups['ftr'] += geom_center()
             setups['ftr'] += mevsvd()
-            setups['ftr'] += calc_principal()
+            setups['ftr'] += calc_principalaxes()
             setups['ftr'] += set_orientation()
         setups['ftr'] += fit_slow(sel, axis)
         setups['ftr'] += scale_fit()
@@ -631,65 +631,36 @@ def scale_fit():
 
 
 def sel_it():
-    code = 'proc sel_it { sel COM weights} {\n' \
+    code = 'proc sel_it { sel COM} {\n' \
             '    set x [ $sel get x ]\n' \
             '    set y [ $sel get y ]\n' \
             '    set z [ $sel get z ]\n' \
-            '    set m $weights\n' \
             '    set Ixx 0\n' \
             '    set Ixy 0\n' \
             '    set Ixz 0\n' \
             '    set Iyy 0\n' \
             '    set Iyz 0\n' \
             '    set Izz 0\n' \
-            '    foreach xx $x yy $y zz $z mm $m {\n' \
-            '        set mm [expr abs($mm)]\n' \
+            '    foreach xx $x yy $y zz $z {\n' \
             '        set xx [expr $xx - [lindex $COM 0]]\n' \
             '        set yy [expr $yy - [lindex $COM 1]]\n' \
             '        set zz [expr $zz - [lindex $COM 2]]\n' \
-            '        set rr [expr $xx + $yy + $zz]\n' \
-            '        set Ixx [expr $Ixx + $mm*($yy*$yy+$zz*$zz)]\n' \
-            '        set Ixy [expr $Ixy - $mm*($xx*$yy)]\n' \
-            '        set Ixz [expr $Ixz - $mm*($xx*$zz)]\n' \
-            '        set Iyy [expr $Iyy + $mm*($xx*$xx+$zz*$zz)]\n' \
-            '        set Iyz [expr $Iyz - $mm*($yy*$zz)]\n' \
-            '        set Izz [expr $Izz + $mm*($xx*$xx+$yy*$yy)]\n' \
+            '        set Ixx [expr $Ixx + ($yy*$yy+$zz*$zz)]\n' \
+            '        set Ixy [expr $Ixy - ($xx*$yy)]\n' \
+            '        set Ixz [expr $Ixz - ($xx*$zz)]\n' \
+            '        set Iyy [expr $Iyy + ($xx*$xx+$zz*$zz)]\n' \
+            '        set Iyz [expr $Iyz - ($yy*$zz)]\n' \
+            '        set Izz [expr $Izz + ($xx*$xx+$yy*$yy)]\n' \
             '    }\n' \
             '    return [list 2 3 3 $Ixx $Ixy $Ixz $Ixy $Iyy $Iyz $Ixz $Iyz $Izz]\n' \
             '}\n\n'
     return code
 
 
-def sel_com():
-    code = 'proc sel_com { sel weights } {\n' \
-            '    set x [ $sel get x ]\n' \
-            '    set y [ $sel get y ]\n' \
-            '    set z [ $sel get z ]\n' \
-            '    set m $weights\n' \
-            '    set comx 0\n' \
-            '    set comy 0\n' \
-            '    set comz 0\n' \
-            '    set totalm 0\n' \
-            '    foreach xx $x yy $y zz $z mm $m {\n' \
-            '        set mm [expr abs($mm)]\n' \
-            '        set comx [ expr "$comx + $xx*$mm" ]\n' \
-            '        set comy [ expr "$comy + $yy*$mm" ]\n' \
-            '        set comz [ expr "$comz + $zz*$mm" ]\n' \
-            '        set totalm [ expr "$totalm + $mm" ]\n' \
-            '    }\n' \
-            '    set comx [ expr "$comx / $totalm" ]\n' \
-            '    set comy [ expr "$comy / $totalm" ]\n' \
-            '    set comz [ expr "$comz / $totalm" ]\n' \
-            '    return [list $comx $comy $comz]\n' \
-            '}\n\n'
-    return code
-    
-
-def calc_principal():
+def calc_principalaxes():
     code = 'proc calc_principalaxes { sel } {\n' \
-            '    set weights [ $sel get mass ]\n' \
-            '    set COM [sel_com $sel $weights]\n' \
-            '    set I [sel_it $sel $COM $weights]\n' \
+            '    set COM [geom_center $sel]\n' \
+            '    set I [sel_it $sel $COM]\n' \
             '    set II [mevsvd_br $I]\n' \
             '    set eig_order [lsort -indices -decreasing [lindex $II 1]]\n' \
             '    set a1 "[lindex $II 0 [expr 3 + [lindex $eig_order 0]]] [lindex $II 0 [expr 6 + ' \
@@ -706,8 +677,7 @@ def calc_principal():
 def set_orientation():
     code = 'proc set_orientation { sel vector2 } {\n' \
             '    set vector1 [lindex [calc_principalaxes $sel] 0]\n' \
-            '    set weights [$sel get mass]\n' \
-            '    set COM [sel_com $sel $weights]\n' \
+            '    set COM [geom_center $sel]\n' \
             '    set vec1 [vecnorm $vector1]\n' \
             '    set vec2 [vecnorm $vector2]\n' \
             '    set rotvec [veccross $vec1 $vec2]\n' \
