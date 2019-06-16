@@ -501,7 +501,10 @@ def gen_command(action):
 
 def gen_cleanup(action):
     cleanups = {}
+    if 'fit_trajectory' in action.action_type:
+        cleanups['ftr'] = "fit_slow 1 1\n\n"
     return cleanups
+
 
 def check_if_convertible(string, object_type, param_name):
     try:
@@ -563,17 +566,22 @@ def fit_slow(selection, axis):
         extra = '[set_orientation $fit_compare [list {}]]'.format(axis)
     else:
         extra = '[measure fit $fit_compare $fit_reference]'
-    code = 'proc fit_slow {{frac}} {{\n' \
+    code = 'proc fit_slow {{frac {{calc_all 0}}}} {{\n' \
            '  set fit_reference [atomselect top "{}" frame 0]\n' \
            '  set fit_compare [atomselect top "{}"]\n' \
            '  set fit_system [atomselect top "all"]\n' \
            '  set num_steps [molinfo top get numframes]\n' \
            '  set curr_frame [molinfo top get frame]\n' \
            '  set smooth_range [mol smoothrep 0 0]\n' \
-           '  if {{$curr_frame > $smooth_range}} {{set start_step [expr $curr_frame - $smooth_range]}} ' \
+           '  if {{$calc_all == 0}} {{\n' \
+           '    if {{$curr_frame > $smooth_range}} {{set start_step [expr $curr_frame - $smooth_range]}} ' \
            'else {{set start_step 0}}\n' \
-           '  if {{$curr_frame < [expr $num_steps - $smooth_range]}} {{set last_step [expr $curr_frame + ' \
+           '    if {{$curr_frame < [expr $num_steps - $smooth_range]}} {{set last_step [expr $curr_frame + ' \
            '$smooth_range + 1]}} else {{set last_step $num_steps}}\n' \
+           '  }}\\\n' \
+           '  else {{\n' \
+           '    set start_step 0\n' \
+           '    set last_step $num_steps}}\n' \
            '  for {{set frame $start_step}} {{$frame < $last_step}} {{incr frame}} {{\n' \
            '    $fit_compare frame $frame\n' \
            '    $fit_system frame $frame\n' \
@@ -581,7 +589,7 @@ def fit_slow(selection, axis):
            '    set scaled_fit [scale_fit $fit_matrix $frac]\n' \
            '    $fit_system move $scaled_fit}}\n' \
            '}}\n\n'.format(selection, selection, extra)
-    return code # TODO add option to go over whole traj in the end
+    return code
 
 
 def scale_fit():
