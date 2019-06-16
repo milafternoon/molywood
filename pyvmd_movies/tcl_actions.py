@@ -502,7 +502,14 @@ def gen_command(action):
 def gen_cleanup(action):
     cleanups = {}
     if 'fit_trajectory' in action.action_type:
-        cleanups['ftr'] = "fit_slow 1 1\n\n"
+        flag = False
+        current = action.scene.actions.index(action)
+        for ac in action.scene.actions[current+1:]:
+            if 'animate' in ac.action_type:
+                flag = True
+        if flag:
+            cleanups['ftr'] = fit_slow(action.parameters['selection'], None)
+            cleanups['ftr'] += "fit_slow 1 1\n\n"
     return cleanups
 
 
@@ -567,11 +574,11 @@ def fit_slow(selection, axis):
     else:
         extra = '[measure fit $fit_compare $fit_reference]'
     code = 'proc fit_slow {{frac {{calc_all 0}}}} {{\n' \
-           '  set fit_reference [atomselect top "{}" frame 0]\n' \
+           '  set curr_frame [molinfo top get frame]\n' \
+           '  set fit_reference [atomselect top "{}" frame $curr_frame]\n' \
            '  set fit_compare [atomselect top "{}"]\n' \
            '  set fit_system [atomselect top "all"]\n' \
            '  set num_steps [molinfo top get numframes]\n' \
-           '  set curr_frame [molinfo top get frame]\n' \
            '  set smooth_range [mol smoothrep 0 0]\n' \
            '  if {{$calc_all == 0}} {{\n' \
            '    if {{$curr_frame > $smooth_range}} {{set start_step [expr $curr_frame - $smooth_range]}} ' \
