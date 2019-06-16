@@ -168,36 +168,41 @@ matplotlib-compatible `keyword=value` pairs can be enumerated after the
 + `center_view` is an instantaneous action that sets the geometric
 center of `selection` (VMD-compatible) as the new camera center to
 which zoom will converge; useful when zooming onto e.g. a reaction center
-+ `fit_trajectory` uses RMSD-based fitting to instantaneously align a
- trajectory to the reference (first) frame, using the `selection` to
- calculate the optimal alignment
 + `add_label` instantaneously adds a text label anchored to an atom
- specified with `atom_index`, with the labeling text specified through
- the `label` parameter; if desired, text size  and color can be
- specified with `label_color` and `text_size`.
+specified with `atom_index`, with the labeling text specified through
+the `label` parameter; if desired, text size  and color can be
+specified with `label_color` and `text_size`.
 + `add_distance` instantaneously adds a distance label between
- the centers of geometry of two VMD-compatible selections, specified
- with `selection1` and `selection2`; as above, text size  and color can
- be specified with `label_color` and `text_size`.
+the centers of geometry of two VMD-compatible selections, specified
+with `selection1` and `selection2`; as above, text size  and color can
+be specified with `label_color` and `text_size`.
 + `remove_label` instantaneously deletes a label specified through
- `alias=...` identical to an `alias` previously specified in `add_label`;
- alternatively, `all=t` removes all existing labels. Note that `alias=...`
- and `all=t` should be mutually exclusive: one either deletes a specific
- label or all of them.
+`alias=...` identical to an `alias` previously specified in `add_label`;
+alternatively, `all=t` removes all existing labels. Note that `alias=...`
+and `all=t` should be mutually exclusive: one either deletes a specific
+label or all of them.
 + `remove_distance` works identically to `remove_label`, but affects
 labels added using `add_distance` instead of `add_label`.
 
-###### Finite-time actions:
-
-+ `animate` runs the trajectory from `init_frame` to `final_frame`,
-adjusting the playback speed to the time specified with `t`;
-`smooth=X` sets the smoothing of all VMD representations to X
+##### Instantaneous or finite-time actions
 + `rotate` rotates the scene by `angle` degrees about `axis` in time `t`.
 `sigmoid=t` gives a smooth transition, while `sigmoid=f` gives a
 constant-velocity one; optionally, `sigmoid=sls` performs a smooth-
 linear-smooth transition (preferable for e.g. multiple full rotations);
 when `t` is not specified, `rotate` will behave as an instantaneous
 action
++ `fit_trajectory` uses RMSD-based fitting to instantaneously align a
+trajectory to the reference (first) frame, using the `selection` to
+calculate the optimal alignment; when `t` is specified, this alignment
+will be gradual instead of abrupt. When `axis=x/y/z/"x_comp y_comp z_comp"`
+is specified, the main principal axis of `selection` will be aligned
+to the chosen/defined axis.
+
+###### Finite-time actions:
+
++ `animate` runs the trajectory from `init_frame` to `final_frame`,
+adjusting the playback speed to the time specified with `t`;
+`smooth=X` sets the smoothing of all VMD representations to X
 + `zoom_in`/`zoom_out` scales the view by a factor of `scale` in time `t`.
 `sigmoid` works like for `rotation`.
 + `make_transparent`/`make_opaque` change the opacity of a selected
@@ -205,26 +210,26 @@ action
 `sigmoid` works like for `rotation`.
 + `show_figure` just shows an image instead of a VMD render during time
 `t`; the image is specified using `figure_index` in conjunction with
- the globally defined list of figure paths, `$ figure files=...`
- + `do_nothing` renders the VMD scene for time `t` without doing
- anything else
- + `add_overlay` allows to add an inset to the scene, with the position
- specified through `origin` (0,0  corresponds to the bottom left corner,
- as in a regular Cartesian coordinate system), and size through
- `relative_size` (1 means fit into the whole  scene, 0.1 means fit into
- a rectangle 10% of the scene size).
+the globally defined list of figure paths, `$ figure files=...`
++ `do_nothing` renders the VMD scene for time `t` without doing
+anything else
++ `add_overlay` allows to add an inset to the scene, with the position
+specified through `origin` (0,0  corresponds to the bottom left corner,
+as in a regular Cartesian coordinate system), and size through
+`relative_size` (1 means fit into the whole  scene, 0.1 means fit into
+a rectangle 10% of the scene size).
     + The content of the overlay can be  an external figure (specified
     through `figure_index`), an on-the-fly  generated matplotlib line
     plot (based on a data file speficied with the `datafile` parameter)
     or plain text.
     + If `datafile=...` is specified, a dot will dynamically follow the
-     values on the plot. By default, the script will try to use `frames`
-     from the accompanying `animate` action to select datapoint indices
-     from the `datafile`. To independently select datapoint indices for
-     the 1D plot (e.g. when the `datafile` has much more entries than
-     the trajectory used in `animate`, one can supply `datafile=...`
-     with `dataframes=...` - it will take precendence over `animate`'s
-     `frames`.
+    values on the plot. By default, the script will try to use `frames`
+    from the accompanying `animate` action to select datapoint indices
+    from the `datafile`. To independently select datapoint indices for
+    the 1D plot (e.g. when the `datafile` has much more entries than
+    the trajectory used in `animate`, one can supply `datafile=...`
+    with `dataframes=...` - it will take precendence over `animate`'s
+    `frames`.
     + If the  data file starts with a single line formatted as
     `# x axis label; y axis label`, `x axis label` and `y axis label`
     will be used to label the corresponding axes of the plot.
@@ -234,13 +239,13 @@ action
     many `add_overlay` commands separated by semicolons and encircled
     in curly brackets works just as any other multiple action (see
     `Notes on input formatting` above).
- + `highlight` creates a new representation to highlight a subset of
- the system selected by specifying the `selection` parameter. Color can
- be chosen with `color`, using either simple color names (black, red,
- blue, orange, yellow, green and white), VMD-compatible ColorIDs (0-32)
- or a coloring scheme keyword (name, type, element, structure etc.).
- Similarly, `style` can be set to newcartoon, licorice, surf,
- quicksurf, vdw or tube (non-case sensitive).
++ `highlight` creates a new representation to highlight a subset of
+the system selected by specifying the `selection` parameter. Color can
+be chosen with `color`, using either simple color names (black, red,
+blue, orange, yellow, green and white), VMD-compatible ColorIDs (0-32)
+or a coloring scheme keyword (name, type, element, structure etc.).
+Similarly, `style` can be set to newcartoon, licorice, surf,
+quicksurf, vdw or tube (non-case sensitive).
     + By default, highlight appears (fades in from transparency) and
     disappears smoothly over the course of the action. If you want your
     highlight to stay visible, use `mode=u` (up) to make it appear only.
@@ -260,5 +265,6 @@ to use a different material, or generate a copy
 + Also, the labels are rendered with a slightly different size and
 appearance with the Snapshot (`draft=t`) and Tachyon (`draft=f`)
 renderers
-+ `fit_trajectory` produces an instantaneous jump in the coordinates,
-so that it should be performed at the beginning of a movie
++ `fit_trajectory` combined with `axis` can become very slow if combined
+with large `selection` (in terms of number of atoms) and/or `animation`
+with large `smooth=...` values

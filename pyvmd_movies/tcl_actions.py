@@ -103,6 +103,7 @@ def gen_loop(action):
     setup = gen_setup(action)
     iterators = gen_iterators(action)
     command = gen_command(action)
+    cleanups = gen_cleanup(action)
     code = "\n\nset fr {}\n".format(action.initframe)
     for act in setup.keys():
         code = code + setup[act]
@@ -124,6 +125,8 @@ def gen_loop(action):
         else:
             code += '  puts "frame: $fr"\n  after {}\n  display update\n'.format(str(int(1000/action.scene.script.fps)))
         code += '  incr fr\n}\n'
+    for act in cleanups.keys():
+        code = code + cleanups[act]
     return code
 
 
@@ -294,19 +297,48 @@ def gen_setup(action):
                               'mol selection {{{}}}\n' \
                               'mol addrep top\n'.format(*style_params[style], cl, lb, sel)
     if 'fit_trajectory' in action.action_type:
-        sel = action.parameters['selection']  # TODO smoothly transition current frame?
-        setups['ftr'] = fit_slow(sel)
+        sel = action.parameters['selection']  # TODO check for interactions
+        try:
+            axis = action.parameters['axis']  # TODO check for interactions
+        except KeyError:
+            axis = None
+            setups['ftr'] = ''
+        else:
+            if axis.lower() == 'z':
+                axis = '0 0 1'
+            elif axis.lower() == 'y':
+                axis = '0 1 0'
+            elif axis.lower() == 'x':
+                axis = '1 0 0'
+            elif len(axis.split()) == 3:
+                axis = np.array([float(q) for q in axis.split()])
+                axis = ' '.join(str(q) for q in axis/np.linalg.norm(axis))
+            else:
+                raise RuntimeError("The 'axis' keyword in fit_trajectory could not be understood")
+            setups['ftr'] = sel_it()
+            setups['ftr'] += sel_com()
+            setups['ftr'] += mevsvd()
+            setups['ftr'] += calc_principal()
+            setups['ftr'] += set_orientation()
+        setups['ftr'] += fit_slow(sel, axis)
         setups['ftr'] += scale_fit()
         if action.framenum == 0:
             setups['ftr'] += "fit_slow 1.0\n"
     if 'rotate' in action.action_type:
         if action.framenum == 0:
             angle = action.parameters['angle']
-            check_if_convertible(angle, float, 'smooth')
+            check_if_convertible(angle, float, 'angle')
             axis = action.parameters['axis']
             if axis.lower() not in 'xyz':
                 raise RuntimeError("'axis' must be either 'x', 'y' or 'z', {} was given instead".format(axis))
             setups['rot'] = 'rotate {} by {}\n'.format(axis.lower(), angle)
+    if 'zoom_in' in action.action_type or 'zoom_out' in action.action_type:
+        if action.framenum == 0:
+            scale = action.parameters['scale']
+            check_if_convertible(scale, float, 'scale')
+            prefix = 'zin' if 'zoom_in' in action.action_type else 'zou'
+            scale = scale if 'zoom_in' in action.action_type else str(1/float(scale))
+            setups[prefix] = 'scale by {}\n'.format(scale)
     return setups
 
 
@@ -334,21 +366,23 @@ def gen_iterators(action):
                     arr = np.ones(action.framenum) * float(angle)/action.framenum
                 iterators[rkey] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'zoom_in' in action.action_type:
-        scale = action.parameters['scale']
-        check_if_convertible(scale, float, 'scale')
-        if sigmoid:
-            arr = sigmoid_norm_prod(float(scale), action.framenum, abruptness)
-        else:
-            arr = np.ones(action.framenum) * float(scale)**(1/action.framenum)
-        iterators['zin'] = ' '.join([str(round(el, num_precision)) for el in arr])
+        if action.framenum > 0:
+            scale = action.parameters['scale']
+            check_if_convertible(scale, float, 'scale')
+            if sigmoid:
+                arr = sigmoid_norm_prod(float(scale), action.framenum, abruptness)
+            else:
+                arr = np.ones(action.framenum) * float(scale)**(1/action.framenum)
+            iterators['zin'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'zoom_out' in action.action_type:
-        scale = action.parameters['scale']
-        check_if_convertible(scale, float, 'scale')
-        if sigmoid:
-            arr = sigmoid_norm_prod(1/float(scale), action.framenum, abruptness)
-        else:
-            arr = np.ones(action.framenum) * 1/(float(scale)**(1/action.framenum))
-        iterators['zou'] = ' '.join([str(round(el, num_precision)) for el in arr])
+        if action.framenum > 0:
+            scale = action.parameters['scale']
+            check_if_convertible(scale, float, 'scale')
+            if sigmoid:
+                arr = sigmoid_norm_prod(1/float(scale), action.framenum, abruptness)
+            else:
+                arr = np.ones(action.framenum) * 1/(float(scale)**(1/action.framenum))
+            iterators['zou'] = ' '.join([str(round(el, num_precision)) for el in arr])
     if 'fit_trajectory' in action.action_type:
         if action.framenum > 0:
             if sigmoid:
@@ -435,11 +469,13 @@ def gen_command(action):
             commands[t_ch] = "set t [lindex ${} $i]\n" \
                              "  material change opacity {} $t\n".format(t_ch, material)
     if 'zoom_in' in action.action_type:
-        commands['zin'] = "set t [lindex $zin $i]\n" \
-                          "  scale by $t\n"
+        if action.framenum > 0:
+            commands['zin'] = "set t [lindex $zin $i]\n" \
+                              "  scale by $t\n"
     elif 'zoom_out' in action.action_type:
-        commands['zou'] = "set t [lindex $zou $i]\n" \
-                          "  scale by $t\n"
+        if action.framenum > 0:
+            commands['zou'] = "set t [lindex $zou $i]\n" \
+                              "  scale by $t\n"
     if 'animate' in action.action_type:
         commands['ani'] = "set t [lindex $ani $i]\n" \
                           "  animate goto $t\n"
@@ -462,6 +498,10 @@ def gen_command(action):
                            "  material change opacity $mat{} $t\n".format(lb, lb)
     return commands
 
+
+def gen_cleanup(action):
+    cleanups = {}
+    return cleanups
 
 def check_if_convertible(string, object_type, param_name):
     try:
@@ -518,20 +558,30 @@ def geom_center():
     return code
 
 
-def fit_slow(selection):
+def fit_slow(selection, axis):
+    if axis:
+        extra = '[set_orientation $fit_compare [list {}]]'.format(axis)
+    else:
+        extra = '[measure fit $fit_compare $fit_reference]'
     code = 'proc fit_slow {{frac}} {{\n' \
            '  set fit_reference [atomselect top "{}" frame 0]\n' \
            '  set fit_compare [atomselect top "{}"]\n' \
            '  set fit_system [atomselect top "all"]\n' \
            '  set num_steps [molinfo top get numframes]\n' \
-           '  for {{set frame 0}} {{$frame < $num_steps}} {{incr frame}} {{\n' \
+           '  set curr_frame [molinfo top get frame]\n' \
+           '  set smooth_range [mol smoothrep 0 0]\n' \
+           '  if {{$curr_frame > $smooth_range}} {{set start_step [expr $curr_frame - $smooth_range]}} ' \
+           'else {{set start_step 0}}\n' \
+           '  if {{$curr_frame < [expr $num_steps - $smooth_range]}} {{set last_step [expr $curr_frame + ' \
+           '$smooth_range + 1]}} else {{set last_step $num_steps}}\n' \
+           '  for {{set frame $start_step}} {{$frame < $last_step}} {{incr frame}} {{\n' \
            '    $fit_compare frame $frame\n' \
            '    $fit_system frame $frame\n' \
-           '    set fit_matrix [measure fit $fit_compare $fit_reference]\n' \
+           '    set fit_matrix {}\n' \
            '    set scaled_fit [scale_fit $fit_matrix $frac]\n' \
            '    $fit_system move $scaled_fit}}\n' \
-           '}}\n\n'.format(selection, selection)
-    return code
+           '}}\n\n'.format(selection, selection, extra)
+    return code # TODO add option to go over whole traj in the end
 
 
 def scale_fit():
@@ -569,4 +619,190 @@ def scale_fit():
            '  lset fitting_matrix {2 3} [expr $multip*[lindex $fitting_matrix 2 3]]\n' \
            '  return $fitting_matrix\n' \
            '}\n\n'
+    return code
+
+
+def sel_it():
+    code = 'proc sel_it { sel COM weights} {\n' \
+            '    set x [ $sel get x ]\n' \
+            '    set y [ $sel get y ]\n' \
+            '    set z [ $sel get z ]\n' \
+            '    set m $weights\n' \
+            '    set Ixx 0\n' \
+            '    set Ixy 0\n' \
+            '    set Ixz 0\n' \
+            '    set Iyy 0\n' \
+            '    set Iyz 0\n' \
+            '    set Izz 0\n' \
+            '    foreach xx $x yy $y zz $z mm $m {\n' \
+            '        set mm [expr abs($mm)]\n' \
+            '        set xx [expr $xx - [lindex $COM 0]]\n' \
+            '        set yy [expr $yy - [lindex $COM 1]]\n' \
+            '        set zz [expr $zz - [lindex $COM 2]]\n' \
+            '        set rr [expr $xx + $yy + $zz]\n' \
+            '        set Ixx [expr $Ixx + $mm*($yy*$yy+$zz*$zz)]\n' \
+            '        set Ixy [expr $Ixy - $mm*($xx*$yy)]\n' \
+            '        set Ixz [expr $Ixz - $mm*($xx*$zz)]\n' \
+            '        set Iyy [expr $Iyy + $mm*($xx*$xx+$zz*$zz)]\n' \
+            '        set Iyz [expr $Iyz - $mm*($yy*$zz)]\n' \
+            '        set Izz [expr $Izz + $mm*($xx*$xx+$yy*$yy)]\n' \
+            '    }\n' \
+            '    return [list 2 3 3 $Ixx $Ixy $Ixz $Ixy $Iyy $Iyz $Ixz $Iyz $Izz]\n' \
+            '}\n\n'
+    return code
+
+
+def sel_com():
+    code = 'proc sel_com { sel weights } {\n' \
+            '    set x [ $sel get x ]\n' \
+            '    set y [ $sel get y ]\n' \
+            '    set z [ $sel get z ]\n' \
+            '    set m $weights\n' \
+            '    set comx 0\n' \
+            '    set comy 0\n' \
+            '    set comz 0\n' \
+            '    set totalm 0\n' \
+            '    foreach xx $x yy $y zz $z mm $m {\n' \
+            '        set mm [expr abs($mm)]\n' \
+            '        set comx [ expr "$comx + $xx*$mm" ]\n' \
+            '        set comy [ expr "$comy + $yy*$mm" ]\n' \
+            '        set comz [ expr "$comz + $zz*$mm" ]\n' \
+            '        set totalm [ expr "$totalm + $mm" ]\n' \
+            '    }\n' \
+            '    set comx [ expr "$comx / $totalm" ]\n' \
+            '    set comy [ expr "$comy / $totalm" ]\n' \
+            '    set comz [ expr "$comz / $totalm" ]\n' \
+            '    return [list $comx $comy $comz]\n' \
+            '}\n\n'
+    return code
+    
+
+def calc_principal():
+    code = 'proc calc_principalaxes { sel } {\n' \
+            '    set weights [ $sel get mass ]\n' \
+            '    set COM [sel_com $sel $weights]\n' \
+            '    set I [sel_it $sel $COM $weights]\n' \
+            '    set II [mevsvd_br $I]\n' \
+            '    set eig_order [lsort -indices -decreasing [lindex $II 1]]\n' \
+            '    set a1 "[lindex $II 0 [expr 3 + [lindex $eig_order 0]]] [lindex $II 0 [expr 6 + ' \
+           '[lindex $eig_order 0]]] [lindex $II 0 [expr 9 + [lindex $eig_order 0]]]"\n' \
+            '    set a2 "[lindex $II 0 [expr 3 + [lindex $eig_order 1]]] [lindex $II 0 [expr 6 + ' \
+           '[lindex $eig_order 1]]] [lindex $II 0 [expr 9 + [lindex $eig_order 1]]]"\n' \
+            '    set a3 "[lindex $II 0 [expr 3 + [lindex $eig_order 2]]] [lindex $II 0 [expr 6 + ' \
+           '[lindex $eig_order 2]]] [lindex $II 0 [expr 9 + [lindex $eig_order 2]]]"\n' \
+            '    return [list $a1 $a2 $a3]\n' \
+            '}\n\n'
+    return code
+    
+
+def set_orientation():
+    code = 'proc set_orientation { sel vector2 } {\n' \
+            '    set vector1 [lindex [calc_principalaxes $sel] 0]\n' \
+            '    set weights [$sel get mass]\n' \
+            '    set COM [sel_com $sel $weights]\n' \
+            '    set vec1 [vecnorm $vector1]\n' \
+            '    set vec2 [vecnorm $vector2]\n' \
+            '    set rotvec [veccross $vec1 $vec2]\n' \
+            '    set sine   [veclength $rotvec]\n' \
+            '    set cosine [vecdot $vec1 $vec2]\n' \
+            '    set angle [expr atan2($sine,$cosine)]\n' \
+            '    return [trans center $COM axis $rotvec $angle rad]\n' \
+            '}\n\n'
+    return code
+
+
+def mevsvd():
+    code = 'proc mevsvd_br {A_in_out {eps 2.3e-16}} {\n' \
+            '    set A $A_in_out\n' \
+            '    set n [lindex $A 1]\n' \
+            '    for {set i 0} {$i < $n} {incr i} {\n' \
+            '        set ii [expr {3 + $i*$n + $i}]\n' \
+            '        set v [lindex $A $ii]\n' \
+            '        for {set j 0} {$j < $n} {incr j} {\n' \
+            '            if { $i != $j } {\n' \
+            '                set ij [expr {3 + $i*$n + $j}]\n' \
+            '                set Aij [lindex $A $ij]\n' \
+            '                set v [expr {$v - abs($Aij)}]\n' \
+            '                }\n' \
+            '             }\n' \
+            '        if { ![info exists h] } { set h $v }\\\n' \
+            '        elseif { $v < $h } { set h $v }\n' \
+            '        }\n' \
+            '    if { $h <= $eps } {\n' \
+            '        set h [expr {$h - sqrt($eps)}]\n' \
+            '        for {set i 0} {$i < $n} {incr i} {\n' \
+            '            set ii [expr {3 + $i*$n + $i}]\n' \
+            '            set Aii [lindex $A $ii]\n' \
+            '            lset A $ii [expr {$Aii - $h}]\n' \
+            '            }\n' \
+            '        }\\\n' \
+            '    else {\n' \
+            '        set h 0.0\n' \
+            '        }\n' \
+            '    set count 0\n' \
+            '  for {set isweep 0} {$isweep < 30 && $count < $n*($n-1)/2} {incr isweep} {\n' \
+            '    set count 0   ;# count of rotations in a sweep\n' \
+            '    for {set j 0} {$j < [expr {$n-1}]} {incr j} {\n' \
+            '        for {set k [expr {$j+1}]} {$k < $n} {incr k} {\n' \
+            '            set p [set q [set r 0.0]]\n' \
+            '            for {set i 0} {$i < $n} {incr i} {\n' \
+            '                set ij [expr {3+$i*$n+$j}]\n' \
+            '                set ik [expr {3+$i*$n+$k}]\n' \
+            '                set Aij [lindex $A $ij]\n' \
+            '                set Aik [lindex $A $ik]\n' \
+            '                set p [expr {$p + $Aij*$Aik}]\n' \
+            '                set q [expr {$q + $Aij*$Aij}]\n' \
+            '                set r [expr {$r + $Aik*$Aik}]\n' \
+            '                }\n' \
+            '             if { 1.0 >= 1.0 + abs($p/sqrt($q*$r)) } {\n' \
+            '                 if { $q >= $r } {\n' \
+            '                     incr count\n' \
+            '                     continue\n' \
+            '                     }\n' \
+            '                 }\n' \
+            '             set q [expr {$q-$r}]\n' \
+            '             set v [expr {sqrt(4.0*$p*$p + $q*$q)}]\n' \
+            '             if { $v == 0.0 } continue\n' \
+            '             if { $q >= 0.0 } {\n' \
+            '                 set c [expr {sqrt(($v+$q)/(2.0*$v))}]\n' \
+            '                 set s [expr {$p/($v*$c)}]\n' \
+            '                 }\\\n' \
+            '             else {\n' \
+            '                 set s [expr {sqrt(($v-$q)/(2.0*$v))}]\n' \
+            '                 if { $p < 0.0 } { set s [expr {0.0-$s}] }\n' \
+            '                 set c [expr {$p/($v*$s)}]\n' \
+            '                 }\n' \
+            '             for {set i 0} {$i < $n} {incr i} {\n' \
+            '                set ij [expr {3+$i*$n+$j}]\n' \
+            '                set ik [expr {3+$i*$n+$k}]\n' \
+            '                set Aij [lindex $A $ij]\n' \
+            '                set Aik [lindex $A $ik]\n' \
+            '                lset A $ij [expr {$Aij*$c + $Aik*$s}]\n' \
+            '                lset A $ik [expr {$Aik*$c - $Aij*$s}]\n' \
+            '                }\n' \
+            '            }\n' \
+            '        } \n' \
+            '    }\n' \
+            '    set evals [list]\n' \
+            '    for {set j 0} {$j < $n} {incr j} {\n' \
+            '        set s 0.0\n' \
+            '        set notpositive 0\n' \
+            '        for {set i 0} {$i < $n} {incr i} {\n' \
+            '            set ij [expr {3+$i*$n+$j}]\n' \
+            '            set Aij [lindex $A $ij]\n' \
+            '            if { $Aij <= 0.0 } { incr notpositive }\n' \
+            '            set s [expr {$s + $Aij*$Aij}]\n' \
+            '            }\n' \
+            '        set s [expr {sqrt($s)}]\n' \
+            '        if { $notpositive == $n } { set sf [expr {0.0-$s}] }\\\n' \
+            '        else { set sf $s }\n' \
+            '        for {set i 0} {$i < $n} {incr i} {\n' \
+            '            set ij [expr {3+$i*$n+$j}]\n' \
+            '            set Aij [lindex $A $ij]\n' \
+            '            lset A $ij [expr {$Aij/$sf}]\n' \
+            '            }\n' \
+            '        lappend evals [expr {$s+$h}]\n' \
+            '        }\n' \
+            '     return [list $A $evals]\n' \
+            '     }\n\n'
     return code

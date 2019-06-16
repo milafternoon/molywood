@@ -479,7 +479,7 @@ class Action:
                       'remove_label': {'alias', 'all'},
                       'add_distance': {'selection1', 'selection2', 'label_color', 'text_size', 'alias'},
                       'remove_distance': {'alias', 'all'},
-                      'fit_trajectory': {'selection', 't'}
+                      'fit_trajectory': {'selection', 't', 'axis'}
                       }
     
     def __init__(self, scene, description):
@@ -612,18 +612,19 @@ class SimultaneousAction(Action):
         :return: None
         """
         actions = [comm.strip() for comm in command.split(';')]
-        igns = []  # ones that we don't want to be overwritten in the 'parameters' dict
         for action in actions:
+            igns = []  # ones that we don't want to be overwritten in the 'parameters' dict
             if action.split()[0] == 'add_overlay':
                 self.parse_many(action, self.overlays, 'overlay')
                 igns.append('figure')
             elif action.split()[0] == 'highlight':
                 self.parse_many(action, self.highlights, 'hl')
+                igns.append('selection')
             elif action.split()[0] in ['make_transparent', 'make_opaque']:
                 self.parse_many(action, self.transp_changes, action.split()[0])
             elif action.split()[0] == 'rotate':
                 self.parse_many(action, self.rots, 'rot')
-            elif action.split()[0] in ['fit_trajectory', 'center_view', 'add_label', 'remove_label',
+            elif action.split()[0] in ['center_view', 'add_label', 'remove_label',
                                        'add_distance', 'remove_distance']:
                 raise RuntimeError("{} is an instantaneous action (i.e. doesn't last over finite time interval) and "
                                    "cannot be combined with finite-time ones".format(action.split()[0]))
