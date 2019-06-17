@@ -669,7 +669,7 @@ def calc_principalaxes():
             '    set COM [geom_center $sel]\n' \
             '    set I [sel_it $sel $COM]\n' \
             '    set II [mevsvd_br $I]\n' \
-            '    set eig_order [lsort -indices -decreasing [lindex $II 1]]\n' \
+            '    set eig_order [lsort -indices -real [lindex $II 1]]\n' \
             '    set a1 "[lindex $II 0 [expr 3 + [lindex $eig_order 0]]] [lindex $II 0 [expr 6 + ' \
            '[lindex $eig_order 0]]] [lindex $II 0 [expr 9 + [lindex $eig_order 0]]]"\n' \
             '    set a2 "[lindex $II 0 [expr 3 + [lindex $eig_order 1]]] [lindex $II 0 [expr 6 + ' \

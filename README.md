@@ -267,11 +267,16 @@ quicksurf, vdw or tube (non-case sensitive).
 + VMD labels are always rendered using the `Opaque` material, so that
 making this material transparent (`make_transparent material=Opaque`)
 will make the labels disappear as well; the straightforward solution is
-to use a different material, or generate a copy
+to use a different material, or generate a copy.
 (`VMD Main > Graphics > Materials > Create New`)
 + Also, the labels are rendered with a slightly different size and
 appearance with the Snapshot (`draft=t`) and Tachyon (`draft=f`)
-renderers
-+ `fit_trajectory` combined with `axis` can become very slow if combined
-with large `selection` (in terms of number of atoms) and/or `animation`
-with large `smooth=...` values
+renderers.
++ `fit_trajectory` combined with `axis` can become slow if combined
+with large `selection` (in terms of number of atoms) and `animation`
+with large `smooth=...` values; it is suggested to only use backbones
+for alignment to principal axes, as the repeated calculation of tensors
+of inertia can be time-consuming in VMD.
++ With the default `ffmpeg` settings, choppy video playback has been
+reported when VLC is being run on OSX; this is solely a video player
+issue.
