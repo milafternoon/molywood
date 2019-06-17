@@ -53,7 +53,7 @@ them first to see how the library works.
 `molywood` can be run from the console (e.g. in the `examples/simple_movie`
 directory) as:
 
- `python ../../moly.py script.txt`
+ `python ../../molywood/moly.py script.txt`
 
 In general, to run `molywood` the following files are needed:
 
