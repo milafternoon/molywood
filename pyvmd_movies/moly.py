@@ -53,7 +53,7 @@ class Script:
                 if self.do_render:
                     if os.name == 'posix':
                         os.system('for i in $(ls {}-*tga); do convert $i $(echo $i | sed "s/tga/png/g"); '
-                             'rm $i; done'.format(scene.name))
+                                  'rm $i; done'.format(scene.name))
                     else:
                         to_convert = [x for x in os.listdir('.') if x.startswith(scene.name) and x.endswith('tga')]
                         for tgafile in to_convert:
@@ -61,7 +61,8 @@ class Script:
                             call('{} {} {}'.format(self.convert, tgafile, pngfile))
                 if not self.draft:
                     if os.name == 'posix':
-                        os.system('for i in $(ls {}-*png); do rm $(echo $i | sed "s/png/dat/g"); done'.format(scene.name))
+                        os.system('for i in $(ls {}-*png); do rm $(echo $i | sed "s/png/dat/g"); '
+                                  'done'.format(scene.name))
                     else:
                         os.system('del {}*dat'.format(scene.name))
             for action in scene.actions:
@@ -70,7 +71,7 @@ class Script:
         if self.do_render:
             graphics_actions.postprocessor(self)
             os.system('ffmpeg -y -framerate {} -i {}-%d.png -profile:v high -crf 20 -pix_fmt yuv420p '
-                 '-vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" {}.mp4'.format(self.fps, self.name, self.name))
+                      '-vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" {}.mp4'.format(self.fps, self.name, self.name))
         if not self.keepframes:
             for sc in self.scenes:
                 if '/' in sc.name or '\\' in sc.name or '~' in sc.name:
@@ -624,6 +625,7 @@ class SimultaneousAction(Action):
                 self.parse_many(action, self.transp_changes, action.split()[0])
             elif action.split()[0] == 'rotate':
                 self.parse_many(action, self.rots, 'rot')
+                igns.append('axis')
             elif action.split()[0] in ['center_view', 'add_label', 'remove_label',
                                        'add_distance', 'remove_distance']:
                 raise RuntimeError("{} is an instantaneous action (i.e. doesn't last over finite time interval) and "
@@ -631,7 +633,11 @@ class SimultaneousAction(Action):
             super().parse(action, tuple(igns))
         self.action_type = [action.split()[0] for action in actions]
         if 'zoom_in' in self.action_type and 'zoom_out' in self.action_type:
-            raise RuntimeError("actions {} are mutually exclusive".format(", ".join(self.action_type)))
+            raise RuntimeError("Actions {} are mutually exclusive".format(", ".join(self.action_type)))
+        if 't' not in self.parameters:
+            raise RuntimeError("You can only combine finite-time actions using curly brackets. In directive"
+                               "\n\n\t{}\n\n the duration is not specified; either rewrite it as consecutive"
+                               "instantaneous actions, or add the 't=...s' parameter to one of them")
     
     def parse_many(self, directive, actions_dict, keyword):
         actions_count = self.scene.counters[keyword]

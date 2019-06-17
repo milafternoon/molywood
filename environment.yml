@@ -1,4 +1,4 @@
-name: pyvmd
+name: molywood
 channels:
   - conda-forge
   - menpo

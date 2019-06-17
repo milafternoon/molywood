@@ -297,9 +297,9 @@ def gen_setup(action):
                               'mol selection {{{}}}\n' \
                               'mol addrep top\n'.format(*style_params[style], cl, lb, sel)
     if 'fit_trajectory' in action.action_type:
-        sel = action.parameters['selection']  # TODO check for interactions
+        sel = action.parameters['selection']
         try:
-            axis = action.parameters['axis']  # TODO check for interactions
+            axis = action.parameters['axis']
         except KeyError:
             axis = None
             setups['ftr'] = ''
@@ -325,7 +325,7 @@ def gen_setup(action):
         if action.framenum == 0:
             setups['ftr'] += "fit_slow 1.0\n"
     if 'rotate' in action.action_type:
-        if action.framenum == 0:
+        if action.framenum == 0:  # TODO not from params
             angle = action.parameters['angle']
             check_if_convertible(angle, float, 'angle')
             axis = action.parameters['axis']
